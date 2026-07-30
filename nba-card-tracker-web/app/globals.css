@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+}
+
+/* Retire les fleches des champs numeriques (steppers maison). */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Bande de cartes "en eventail" de l'accueil : chevauchement + rotation. */
+.fan-strip > * {
+  margin-left: -1.75rem;
+  transform-origin: bottom center;
+  transition: transform 150ms ease, margin 150ms ease;
+}
+.fan-strip > *:first-child {
+  margin-left: 0;
+}
+.fan-strip > *:hover {
+  transform: translateY(-6px) rotate(0deg) !important;
+  z-index: 20;
+}
