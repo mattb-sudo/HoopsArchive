@@ -5,6 +5,7 @@ import FannedCards from "@/components/FannedCards";
 import ProgressBar from "@/components/ProgressBar";
 import SetCover from "@/components/SetCover";
 import SetupNotice from "@/components/SetupNotice";
+import { setCoverImage } from "@/lib/setCovers";
 import { duplicateCopies, duplicateCount, progressOf, subsetLabel } from "@/lib/cards";
 import {
   focusProgressList,
@@ -87,7 +88,12 @@ export default async function AccueilPage() {
               className="rounded-xl border border-zinc-200 bg-white p-3 transition hover:border-orange-400 dark:border-zinc-800 dark:bg-zinc-900"
             >
               <div className="flex gap-3">
-                <SetCover setId={set.id} name={set.name} className="w-12 shrink-0 text-base" />
+                <SetCover
+                  setId={set.id}
+                  name={set.name}
+                  imageSrc={setCoverImage(set.id)}
+                  className="w-12 shrink-0 text-base"
+                />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{set.name}</p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">{set.manufacturer ?? "—"}</p>

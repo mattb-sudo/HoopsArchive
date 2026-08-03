@@ -4,6 +4,7 @@ import AddSetPlaceholder from "@/components/AddSetPlaceholder";
 import ProgressBar from "@/components/ProgressBar";
 import SetCover from "@/components/SetCover";
 import SetupNotice from "@/components/SetupNotice";
+import { setCoverImage } from "@/lib/setCovers";
 import { getCollectionSnapshot, requireUser, setProgressList } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -40,7 +41,12 @@ export default async function SetsPage() {
               href={`/classeur/${encodeURIComponent(set.id)}`}
               className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-3 transition hover:border-orange-400 dark:border-zinc-800 dark:bg-zinc-900"
             >
-              <SetCover setId={set.id} name={set.name} className="w-14 shrink-0 text-lg" />
+              <SetCover
+                setId={set.id}
+                name={set.name}
+                imageSrc={setCoverImage(set.id)}
+                className="w-14 shrink-0 text-lg"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{set.name}</p>
                 <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">

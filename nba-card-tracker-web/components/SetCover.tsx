@@ -16,11 +16,24 @@ export default function SetCover({
   setId,
   name,
   className = "",
+  imageSrc,
 }: {
   setId: string;
   name: string;
   className?: string;
+  imageSrc?: string;
 }) {
+  if (imageSrc) {
+    return (
+      <div
+        className={`relative aspect-[5/7] overflow-hidden rounded-lg shadow-card ${className}`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imageSrc} alt={name} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+
   const [from, to] = PALETTES[hashSeed(setId) % PALETTES.length];
   const initials = name
     .replace(/[^\p{L}\p{N} ]/gu, " ")
