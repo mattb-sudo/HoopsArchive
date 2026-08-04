@@ -8,6 +8,7 @@ import { duplicateCopies, duplicateCount, progressOf } from "@/lib/cards";
 import { focusProgressList, getCollectionSnapshot, requireUser } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { teamColors } from "@/lib/teamColors";
+import { NOISE_TEXTURE } from "@/lib/textures";
 import type { CardWithState, SubsetRow, SubsetType } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Statistiques" };
@@ -84,14 +85,22 @@ export default async function StatsPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold">Statistiques</h1>
-          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-purple-700 dark:bg-purple-900/50 dark:text-purple-200">
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-5 text-white shadow-card">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{ backgroundImage: NOISE_TEXTURE }}
+        />
+        <p className="relative text-xs font-semibold uppercase tracking-widest text-orange-400">
+          Ma progression
+        </p>
+        <div className="relative mt-1 flex items-center gap-2">
+          <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Statistiques</h1>
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/70 ring-1 ring-white/15">
             En évolution
           </span>
         </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="relative mt-1 text-sm text-white/70">
           Ces vues s&apos;enrichiront au fil des ajouts : la page est volontairement simple pour
           l&apos;instant.
         </p>

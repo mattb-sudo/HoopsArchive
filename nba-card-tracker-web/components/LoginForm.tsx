@@ -2,8 +2,25 @@
 
 import { useState, useTransition } from "react";
 import { signInAction, signUpAction } from "@/lib/actions";
+import { NOISE_TEXTURE } from "@/lib/textures";
 
 type Mode = "signin" | "signup";
+
+/** Marque : ballon simplifie (silhouette + coutures), pas d'emoji. */
+function BallMark({ className = "h-8 w-8" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="9.5" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M12 2.5v19M2.5 12h19M4.8 5.6c2.3 2.1 3.7 4.6 3.7 6.4s-1.4 4.3-3.7 6.4M19.2 5.6c-2.3 2.1-3.7 4.6-3.7 6.4s1.4 4.3 3.7 6.4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 /** Une redirection cote serveur remonte sous forme d'erreur : il faut la relayer. */
 function isRedirect(error: unknown): boolean {
@@ -42,10 +59,17 @@ export default function LoginForm({ next }: { next?: string }) {
 
   return (
     <div className="mx-auto max-w-sm">
-      <div className="text-center">
-        <p className="text-5xl">🏀</p>
-        <h1 className="mt-3 text-2xl font-bold">NBA Card Tracker</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-6 text-center text-white shadow-card">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{ backgroundImage: NOISE_TEXTURE }}
+        />
+        <BallMark className="relative mx-auto h-9 w-9 text-orange-500" />
+        <h1 className="relative mt-2 font-display text-2xl font-semibold uppercase tracking-wide">
+          Hoops<span className="text-orange-500">Archive</span>
+        </h1>
+        <p className="relative mt-1 text-sm text-white/70">
           Suivez votre collection de cartes de basket.
         </p>
       </div>

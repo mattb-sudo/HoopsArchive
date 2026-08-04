@@ -187,7 +187,7 @@ export default function CardDetail({
         {/* -------- Informations -------- */}
         <div className="space-y-4">
           <header>
-            <h1 className="text-2xl font-bold leading-tight">
+            <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight">
               {card.player ?? "—"}
               {card.rookie ? (
                 <span className="ml-2 align-middle rounded bg-amber-400 px-1.5 py-0.5 text-xs font-bold text-black">

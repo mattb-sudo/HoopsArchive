@@ -13,6 +13,7 @@ import {
   requireUser,
 } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { NOISE_TEXTURE } from "@/lib/textures";
 
 export const metadata: Metadata = { title: "Profil" };
 export const dynamic = "force-dynamic";
@@ -41,10 +42,20 @@ export default async function ProfilPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-xl font-bold">Profil</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Compte {user.email ?? "—"} · inscrit le {formatDateFr(user.created_at)}
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-5 text-white shadow-card">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{ backgroundImage: NOISE_TEXTURE }}
+        />
+        <p className="relative text-xs font-semibold uppercase tracking-widest text-orange-400">
+          Compte
+        </p>
+        <h1 className="relative mt-1 font-display text-2xl font-bold uppercase tracking-tight">
+          Profil
+        </h1>
+        <p className="relative mt-1 text-sm text-white/70">
+          {user.email ?? "—"} · inscrit le {formatDateFr(user.created_at)}
         </p>
       </header>
 

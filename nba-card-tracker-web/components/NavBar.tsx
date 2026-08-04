@@ -148,7 +148,7 @@ export default function NavBar() {
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-1 px-4">
           <Link href="/accueil" className="mr-4 flex items-center gap-2">
             <BallMark className="h-6 w-6 text-orange-500" />
-            <span className="hidden font-display text-lg font-semibold uppercase tracking-wide text-white md:inline">
+            <span className="font-display text-lg font-semibold uppercase tracking-wide text-white">
               Hoops<span className="text-orange-500">Archive</span>
             </span>
           </Link>
@@ -165,7 +165,7 @@ export default function NavBar() {
               }`}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span className="hidden md:inline">{item.label}</span>
             </Link>
           ))}
 
@@ -209,7 +209,7 @@ export default function NavBar() {
               className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600"
             >
               {ADD_ITEM.icon}
-              <span>{ADD_ITEM.label}</span>
+              <span className="hidden md:inline">{ADD_ITEM.label}</span>
             </Link>
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function NavBar() {
                   href={item.href}
                   aria-current={isActive(pathname, item.href) ? "page" : undefined}
                   className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                    isActive(pathname, item.href) ? "text-orange-400" : "text-zinc-500"
+                    isActive(pathname, item.href) ? "text-orange-400" : "text-zinc-400"
                   }`}
                 >
                   {item.icon}

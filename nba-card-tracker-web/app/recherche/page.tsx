@@ -3,6 +3,7 @@ import CardGrid from "@/components/CardGrid";
 import SetupNotice from "@/components/SetupNotice";
 import { getProfile, getSets, getSubsets, requireUser, searchCards } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { NOISE_TEXTURE } from "@/lib/textures";
 import { parseStatusFilter, type SubsetType } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Recherche" };
@@ -45,9 +46,19 @@ export default async function RecherchePage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-xl font-bold">Recherche</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-5 text-white shadow-card">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{ backgroundImage: NOISE_TEXTURE }}
+        />
+        <p className="relative text-xs font-semibold uppercase tracking-widest text-orange-400">
+          Trouver une carte
+        </p>
+        <h1 className="relative mt-1 font-display text-2xl font-bold uppercase tracking-tight">
+          Recherche
+        </h1>
+        <p className="relative mt-1 text-sm text-white/70">
           Par joueur, équipe, numéro de carte ou nom de set.
         </p>
       </header>
