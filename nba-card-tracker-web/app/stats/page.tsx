@@ -85,7 +85,7 @@ export default async function StatsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-5 text-white shadow-card">
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 p-5 text-white shadow-[0_20px_45px_-20px_rgba(0,0,0,0.45)]">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"

@@ -33,7 +33,7 @@ export default async function FocusPage({ params }: { params: { id: string } }) 
   const groupBy = scoped.length > GROUP_BY_SET_THRESHOLD ? "set" : "subset";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
         <Link
           href="/focus"
@@ -43,7 +43,7 @@ export default async function FocusPage({ params }: { params: { id: string } }) 
         </Link>
       </div>
 
-      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-4 text-white shadow-card">
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 p-4 text-white shadow-[0_20px_45px_-20px_rgba(0,0,0,0.45)]">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"

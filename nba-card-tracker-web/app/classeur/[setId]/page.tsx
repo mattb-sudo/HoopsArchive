@@ -32,7 +32,7 @@ export default async function ClasseurPage({ params, searchParams }: PageProps) 
   const progress = progressOf(cards);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
         <Link
           href="/sets"
@@ -42,7 +42,7 @@ export default async function ClasseurPage({ params, searchParams }: PageProps) 
         </Link>
       </div>
 
-      <header className="relative flex items-center gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-4 text-white shadow-card">
+      <header className="relative flex items-center gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 p-4 text-white shadow-[0_20px_45px_-20px_rgba(0,0,0,0.45)]">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"

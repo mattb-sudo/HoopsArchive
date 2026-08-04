@@ -41,6 +41,7 @@ export default async function CartePage({ params }: PageProps) {
   return (
     <CardDetail
       card={card}
+      cards={view.cards}
       setName={view.set.name}
       subsetName={subsetLabel(card.subset, view.subsets)}
       signers={signers}

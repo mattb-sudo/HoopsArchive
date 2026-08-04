@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import CardVisual from "./CardVisual";
 import {
   removeCardPhotoAction,
@@ -15,6 +16,8 @@ import type { CardPlayerRow, CardWithState } from "@/lib/types";
 
 export interface CardDetailProps {
   card: CardWithState;
+  /** Toutes les cartes du set, dans l'ordre — pour la bande de miniatures. */
+  cards: CardWithState[];
   subsetName: string;
   setName: string;
   signers: CardPlayerRow[];
@@ -23,8 +26,14 @@ export interface CardDetailProps {
   nextCode: string | null;
 }
 
+// Nombre de cartes affichees de part et d'autre de la carte courante dans la
+// bande de miniatures : un set peut compter plusieurs centaines de cartes,
+// on evite d'en monter des centaines a la fois dans le DOM.
+const FILMSTRIP_WINDOW = 20;
+
 export default function CardDetail({
   card,
+  cards,
   subsetName,
   setName,
   signers,
@@ -42,8 +51,42 @@ export default function CardDetail({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+  const activeThumbRef = useRef<HTMLAnchorElement>(null);
+  const router = useRouter();
 
   const base = `/carte/${encodeURIComponent(card.set_id)}`;
+
+  // Navigation clavier : fleches gauche/droite = carte precedente/suivante.
+  // Desactivee si le focus est dans un champ de saisie (edition en cours).
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
+      if (typing) return;
+      if (event.key === "ArrowLeft" && prevCode) {
+        router.push(`${base}/${encodeURIComponent(prevCode)}`);
+      } else if (event.key === "ArrowRight" && nextCode) {
+        router.push(`${base}/${encodeURIComponent(nextCode)}`);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [base, prevCode, nextCode, router]);
+
+  // Fenetre de miniatures autour de la carte courante (un set peut compter
+  // plusieurs centaines de cartes : on n'en monte jamais plus d'une
+  // quarantaine a la fois dans le DOM).
+  const currentIndex = cards.findIndex((c) => c.card_code === card.card_code);
+  const filmstrip = useMemo(() => {
+    if (currentIndex < 0) return cards.slice(0, FILMSTRIP_WINDOW * 2 + 1);
+    const start = Math.max(0, currentIndex - FILMSTRIP_WINDOW);
+    const end = Math.min(cards.length, currentIndex + FILMSTRIP_WINDOW + 1);
+    return cards.slice(start, end);
+  }, [cards, currentIndex]);
+
+  useEffect(() => {
+    activeThumbRef.current?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [card.card_code]);
 
   function flash(message: string) {
     setSaved(message);
@@ -134,6 +177,35 @@ export default function CardDetail({
           ) : null}
         </div>
       </div>
+
+      {/* -------- Bande de miniatures : clic direct sur une carte proche -------- */}
+      {filmstrip.length > 1 ? (
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:-mx-0 sm:px-0">
+          {filmstrip.map((c) => {
+            const isActive = c.card_code === card.card_code;
+            return (
+              <Link
+                key={c.card_code}
+                ref={isActive ? activeThumbRef : undefined}
+                href={`${base}/${encodeURIComponent(c.card_code)}`}
+                title={`${c.player ?? "—"} · n° ${c.card_code}`}
+                className={`w-11 shrink-0 rounded-md transition ${
+                  isActive ? "ring-2 ring-orange-500" : "opacity-70 hover:opacity-100"
+                }`}
+              >
+                <CardVisual
+                  player={c.player}
+                  team={c.team}
+                  cardCode={c.card_code}
+                  rookie={c.rookie}
+                  size="thumb"
+                  dimmed={!c.owned}
+                />
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="grid gap-5 sm:grid-cols-[minmax(0,15rem)_1fr]">
         {/* -------- Visuel -------- */}
