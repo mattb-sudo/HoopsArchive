@@ -9,6 +9,7 @@ import { setCoverImage } from "@/lib/setCovers";
 import { duplicateCount, progressOf } from "@/lib/cards";
 import { getProfile, getSetView, requireUser } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { NOISE_TEXTURE } from "@/lib/textures";
 import { parseStatusFilter } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Classeur" };
@@ -41,24 +42,32 @@ export default async function ClasseurPage({ params, searchParams }: PageProps) 
         </Link>
       </div>
 
-      <header className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+      <header className="relative flex items-center gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-4 text-white shadow-card">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{ backgroundImage: NOISE_TEXTURE }}
+        />
         <SetCover
           setId={set.id}
           name={set.name}
           imageSrc={setCoverImage(set.id)}
-          className="w-14 shrink-0 text-lg"
+          className="relative w-16 shrink-0 text-lg ring-1 ring-white/15"
         />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold">{set.name}</h1>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            {set.manufacturer ?? "—"} · {duplicateCount(cards)} doublon
+        <div className="relative min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-orange-400">
+            {set.manufacturer ?? "Set"} · {duplicateCount(cards)} doublon
             {duplicateCount(cards) > 1 ? "s" : ""}
           </p>
+          <h1 className="truncate font-display text-2xl font-bold uppercase tracking-tight">
+            {set.name}
+          </h1>
           <ProgressBar
             owned={progress.owned}
             total={progress.total}
             pct={progress.pct}
-            size="md"
+            size="lg"
+            inverted
             className="mt-2"
           />
         </div>

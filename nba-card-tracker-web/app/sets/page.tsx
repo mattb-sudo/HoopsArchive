@@ -7,6 +7,7 @@ import SetupNotice from "@/components/SetupNotice";
 import { setCoverImage } from "@/lib/setCovers";
 import { getCollectionSnapshot, requireUser, setProgressList } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { NOISE_TEXTURE } from "@/lib/textures";
 
 export const metadata: Metadata = { title: "Bibliothèque de sets" };
 export const dynamic = "force-dynamic";
@@ -26,9 +27,19 @@ export default async function SetsPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-xl font-bold">Bibliothèque de sets</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-5 text-white shadow-card">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{ backgroundImage: NOISE_TEXTURE }}
+        />
+        <p className="relative text-xs font-semibold uppercase tracking-widest text-orange-400">
+          Bibliothèque
+        </p>
+        <h1 className="relative mt-1 font-display text-2xl font-bold uppercase tracking-tight">
+          Tous les sets
+        </h1>
+        <p className="relative mt-1 text-sm text-white/70">
           {sets.length} set{sets.length > 1 ? "s" : ""} suivi{sets.length > 1 ? "s" : ""}, du plus
           récent au plus ancien.
         </p>

@@ -166,27 +166,6 @@ export default function CardGrid({
               className="min-w-[10rem] flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-orange-500 dark:border-zinc-700 dark:bg-zinc-950"
             />
 
-            {showSubsetFilter && orderedSubsets.length > 0 ? (
-              <>
-                <label className="sr-only" htmlFor="grid-subset">
-                  Sous-ensemble
-                </label>
-                <select
-                  id="grid-subset"
-                  value={subsetId}
-                  onChange={(e) => setSubsetId(e.target.value)}
-                  className="rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-                >
-                  <option value="">Tous les sous-ensembles</option>
-                  {orderedSubsets.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : null}
-
             <label className="sr-only" htmlFor="grid-sort">
               Trier par
             </label>
@@ -221,6 +200,40 @@ export default function CardGrid({
               ))}
             </div>
           </div>
+
+          {showSubsetFilter && orderedSubsets.length > 0 ? (
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+              <button
+                type="button"
+                onClick={() => setSubsetId("")}
+                aria-pressed={subsetId === ""}
+                title="Tous les sous-ensembles"
+                className={`shrink-0 rounded-full px-2.5 py-1 font-display text-[11px] font-semibold uppercase tracking-wide ring-1 transition ${
+                  subsetId === ""
+                    ? "bg-orange-500 text-white ring-orange-500"
+                    : "bg-transparent text-zinc-500 ring-zinc-300 hover:ring-orange-400 dark:text-zinc-400 dark:ring-zinc-700"
+                }`}
+              >
+                Tout
+              </button>
+              {orderedSubsets.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSubsetId((current) => (current === s.id ? "" : s.id))}
+                  aria-pressed={subsetId === s.id}
+                  title={s.name}
+                  className={`shrink-0 rounded-full px-2.5 py-1 font-display text-[11px] font-semibold uppercase tracking-wide ring-1 transition ${
+                    subsetId === s.id
+                      ? "bg-orange-500 text-white ring-orange-500"
+                      : "bg-transparent text-zinc-500 ring-zinc-300 hover:ring-orange-400 dark:text-zinc-400 dark:ring-zinc-700"
+                  }`}
+                >
+                  {s.id}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex overflow-hidden rounded-lg border border-zinc-300 dark:border-zinc-700">

@@ -15,6 +15,7 @@ import {
 } from "@/lib/db";
 import { dailyPick } from "@/lib/rng";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { NOISE_TEXTURE } from "@/lib/textures";
 import type { CardWithState } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Accueil" };
@@ -57,16 +58,27 @@ export default async function AccueilPage() {
   return (
     <div className="space-y-8">
       {/* -------- Banniere globale -------- */}
-      <section className="rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 p-5 text-white shadow-card">
-        <p className="text-xs font-semibold uppercase tracking-widest opacity-90">Ma collection</p>
-        <p className="mt-1 font-mono text-4xl font-black tabular-nums">
-          {global.owned}
-          <span className="text-2xl font-bold opacity-80">/{global.total}</span>
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-black p-5 text-white shadow-card">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{ backgroundImage: NOISE_TEXTURE }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/25 blur-3xl"
+        />
+        <p className="relative text-xs font-semibold uppercase tracking-widest text-orange-400">
+          Ma collection
         </p>
-        <p className="text-sm opacity-90">{global.pct}% de la checklist</p>
-        <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-black/25">
+        <p className="relative mt-1 font-display text-4xl font-bold tabular-nums tracking-tight">
+          {global.owned}
+          <span className="text-2xl font-medium text-white/50">/{global.total}</span>
+        </p>
+        <p className="relative text-sm text-white/70">{global.pct}% de la checklist</p>
+        <div className="relative mt-3 h-3 w-full overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-white transition-all duration-700"
+            className="h-full rounded-full bg-orange-500 transition-all duration-700"
             style={{ width: `${global.pct}%` }}
           />
         </div>
@@ -75,7 +87,9 @@ export default async function AccueilPage() {
       {/* -------- Sets en cours -------- */}
       <section>
         <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-base font-bold">Sets en cours</h2>
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
+            Sets en cours
+          </h2>
           <Link href="/sets" className="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">
             Tous les sets
           </Link>
@@ -107,14 +121,18 @@ export default async function AccueilPage() {
 
       {/* -------- Dernieres cartes ajoutees -------- */}
       <section>
-        <h2 className="text-base font-bold">Dernières cartes ajoutées</h2>
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
+          Dernières cartes ajoutées
+        </h2>
         <FannedCards cards={lastAdded} />
       </section>
 
       {/* -------- Recommandations par focus -------- */}
       <section>
         <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-base font-bold">Mes focus</h2>
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
+            Mes focus
+          </h2>
           <Link href="/profil" className="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">
             Gérer
           </Link>

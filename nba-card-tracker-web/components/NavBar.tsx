@@ -26,6 +26,22 @@ function Icon({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Marque : ballon simplifie (silhouette + coutures), pas d'emoji. */
+function BallMark({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="9.5" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M12 2.5v19M2.5 12h19M4.8 5.6c2.3 2.1 3.7 4.6 3.7 6.4s-1.4 4.3-3.7 6.4M19.2 5.6c-2.3 2.1-3.7 4.6-3.7 6.4s1.4 4.3 3.7 6.4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 const NAV_ITEMS: NavItem[] = [
   {
     href: "/accueil",
@@ -107,12 +123,20 @@ export default function NavBar() {
 
   return (
     <>
+      {/*
+        Chrome de navigation toujours sombre (comme les apps sportives type
+        Apple Sports/NFL), independant du theme clair/sombre choisi pour le
+        contenu — c'est l'identite visuelle fixe de l'appli.
+      */}
+
       {/* -------- Desktop : barre haute -------- */}
-      <header className="fixed inset-x-0 top-0 z-40 hidden border-b border-zinc-200 bg-white/90 backdrop-blur sm:block dark:border-zinc-800 dark:bg-zinc-950/90">
+      <header className="fixed inset-x-0 top-0 z-40 hidden border-b border-white/10 bg-zinc-950 sm:block">
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-1 px-4">
-          <Link href="/accueil" className="mr-3 flex items-center gap-2 font-bold">
-            <span className="text-xl leading-none">🏀</span>
-            <span className="hidden text-sm md:inline">NBA Card Tracker</span>
+          <Link href="/accueil" className="mr-4 flex items-center gap-2">
+            <BallMark className="h-6 w-6 text-orange-500" />
+            <span className="hidden font-display text-lg font-semibold uppercase tracking-wide text-white md:inline">
+              Hoops<span className="text-orange-500">Archive</span>
+            </span>
           </Link>
 
           {NAV_ITEMS.map((item) => (
@@ -120,10 +144,10 @@ export default function NavBar() {
               key={item.href}
               href={item.href}
               aria-current={isActive(pathname, item.href) ? "page" : undefined}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              className={`relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition after:absolute after:inset-x-3 after:-bottom-[1px] after:h-0.5 after:rounded-full after:transition-colors ${
                 isActive(pathname, item.href)
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
-                  : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  ? "text-white after:bg-orange-500"
+                  : "text-zinc-400 after:bg-transparent hover:text-zinc-100"
               }`}
             >
               {item.icon}
@@ -144,7 +168,7 @@ export default function NavBar() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Joueur, équipe, numéro…"
-                  className="w-56 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-orange-500 dark:border-zinc-700 dark:bg-zinc-900"
+                  className="w-56 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-orange-500"
                 />
                 <button
                   type="submit"
@@ -158,7 +182,7 @@ export default function NavBar() {
                 type="button"
                 onClick={() => setExpanded(true)}
                 aria-label="Ouvrir la recherche"
-                className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className="rounded-lg p-2 text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
               >
                 {SEARCH_ICON}
               </button>
@@ -168,7 +192,7 @@ export default function NavBar() {
       </header>
 
       {/* -------- Mobile : barre basse -------- */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden dark:border-zinc-800 dark:bg-zinc-950/95">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
         <ul className="grid grid-cols-5">
           {[
             NAV_ITEMS[0],
@@ -182,9 +206,7 @@ export default function NavBar() {
                 href={item.href}
                 aria-current={isActive(pathname, item.href) ? "page" : undefined}
                 className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                  isActive(pathname, item.href)
-                    ? "text-orange-600 dark:text-orange-400"
-                    : "text-zinc-500 dark:text-zinc-400"
+                  isActive(pathname, item.href) ? "text-orange-400" : "text-zinc-500"
                 }`}
               >
                 {item.icon}
