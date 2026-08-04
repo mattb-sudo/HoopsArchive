@@ -1,4 +1,5 @@
 import { readableTextColor, teamColors, teamGradient } from "@/lib/teamColors";
+import { NOISE_TEXTURE } from "@/lib/textures";
 
 export type CardVisualSize = "thumb" | "tile" | "hero";
 
@@ -45,14 +46,18 @@ export default function CardVisual({
   const [, secondary] = teamColors(team);
   const textColor = readableTextColor(team);
 
+  const shadowClass = gold
+    ? "shadow-[0_0_0_1.5px_rgba(255,255,255,.65),0_0_0_3.5px_rgba(251,191,36,.95),0_6px_16px_-2px_rgba(251,191,36,.45)]"
+    : "shadow-card";
+
   return (
     <div
       className={[
         "relative w-full overflow-hidden rounded-lg select-none",
         "aspect-[5/7]",
-        gold ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-transparent" : "",
+        "transition-shadow duration-150 group-hover:shadow-card-hover",
         dimmed ? "grayscale-[0.85] opacity-60" : "",
-        "shadow-card",
+        shadowClass,
         className,
       ]
         .filter(Boolean)
@@ -60,14 +65,17 @@ export default function CardVisual({
       style={photoUrl ? undefined : { background: teamGradient(team), color: textColor }}
     >
       {photoUrl ? (
-        <img
-          src={photoUrl}
-          alt={`Photo de la carte ${cardCode}${player ? ` — ${player}` : ""}`}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        <>
+          <img
+            src={photoUrl}
+            alt={`Photo de la carte ${cardCode}${player ? ` — ${player}` : ""}`}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div aria-hidden className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/20" />
+        </>
       ) : (
         <>
-          {/* Motif decoratif : bande diagonale + halo, purement CSS */}
+          {/* Halo colore + bande diagonale, purement CSS */}
           <div
             aria-hidden
             className="absolute inset-0 opacity-25"
@@ -80,7 +88,25 @@ export default function CardVisual({
             className="absolute -left-1/4 top-1/3 h-[140%] w-[160%] rotate-[-24deg] opacity-10"
             style={{ background: "linear-gradient(90deg, transparent, #ffffff 45%, transparent)" }}
           />
-          <div aria-hidden className="absolute inset-[3px] rounded-md border border-white/25" />
+          {/* Grain fin pour casser l'aplat du degrade */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-[0.12] mix-blend-overlay"
+            style={{ backgroundImage: NOISE_TEXTURE }}
+          />
+          {/* Vignette : assombrit legerement les bords pour donner du volume */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{ boxShadow: "inset 0 0 22px 4px rgba(0,0,0,0.35)" }}
+          />
+          {/* Cadre : hairline exterieure + liseré interieur, comme une vraie carte */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/15" />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-[3px] rounded-md border border-white/30"
+            style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25)" }}
+          />
         </>
       )}
 
@@ -88,7 +114,7 @@ export default function CardVisual({
         <div className="flex items-start justify-between gap-1">
           {rookie ? (
             <span
-              className={`rounded bg-amber-400 font-bold uppercase tracking-wide text-black ${s.badge}`}
+              className={`rounded-full bg-amber-400 font-bold uppercase tracking-wide text-black shadow-sm ring-1 ring-black/10 ${s.badge}`}
             >
               RC
             </span>
@@ -96,14 +122,14 @@ export default function CardVisual({
             <span />
           )}
           <span
-            className={`rounded bg-black/45 font-mono tabular-nums text-white ${s.code} px-1`}
+            className={`rounded-full bg-black/50 font-mono tabular-nums text-white shadow-sm ring-1 ring-white/15 backdrop-blur-[1px] ${s.badge}`}
             title={`Carte n° ${cardCode}`}
           >
             {cardCode}
           </span>
         </div>
 
-        <div className={photoUrl ? "rounded bg-black/55 px-1.5 py-1 text-white" : ""}>
+        <div className={photoUrl ? "rounded-md bg-black/55 px-1.5 py-1 text-white shadow-sm" : ""}>
           {subsetLabel && size !== "thumb" ? (
             <p className={`truncate font-medium uppercase tracking-wide opacity-80 ${s.code}`}>
               {subsetLabel}

@@ -90,7 +90,10 @@ export default function CardTile({
 
   return (
     <div className={`group relative ${pending ? "opacity-60" : ""}`}>
-      <Link href={cardHref(card)} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg">
+      <Link
+        href={cardHref(card)}
+        className="block rounded-lg transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 group-hover:-translate-y-0.5"
+      >
         <CardVisual
           player={card.player}
           team={card.team}

@@ -1,4 +1,5 @@
 import { hashSeed } from "@/lib/rng";
+import { NOISE_TEXTURE } from "@/lib/textures";
 
 const PALETTES: [string, string][] = [
   ["#F97316", "#FBBF24"],
@@ -30,6 +31,7 @@ export default function SetCover({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={imageSrc} alt={name} className="h-full w-full object-cover" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/20" />
       </div>
     );
   }
@@ -53,8 +55,22 @@ export default function SetCover({
         className="absolute -left-1/3 top-1/4 h-[150%] w-[170%] rotate-[-25deg] opacity-20"
         style={{ background: "linear-gradient(90deg, transparent, #fff 50%, transparent)" }}
       />
-      <div className="absolute inset-[3px] rounded-md border border-white/30" />
-      <span className="relative font-black tracking-tight text-white drop-shadow">{initials}</span>
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.12] mix-blend-overlay"
+        style={{ backgroundImage: NOISE_TEXTURE }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ boxShadow: "inset 0 0 22px 4px rgba(0,0,0,0.35)" }}
+      />
+      <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/15" />
+      <div
+        className="pointer-events-none absolute inset-[3px] rounded-md border border-white/30"
+        style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25)" }}
+      />
+      <span className="relative font-black tracking-tight text-white drop-shadow" style={{ textShadow: "0 2px 6px rgba(0,0,0,0.45)" }}>
+        {initials}
+      </span>
     </div>
   );
 }
