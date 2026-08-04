@@ -133,8 +133,8 @@ export default async function AccueilPage() {
           <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
             Mes focus
           </h2>
-          <Link href="/profil" className="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">
-            Gérer
+          <Link href="/focus" className="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">
+            Tous mes focus
           </Link>
         </div>
 

@@ -42,6 +42,9 @@ function BallMark({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
+// Destinations de premier niveau. "Ajouter" n'en fait pas partie : c'est une
+// action, pas une section a parcourir — elle a son propre traitement (bouton
+// plein sur desktop, FAB surelevee au centre sur mobile).
 const NAV_ITEMS: NavItem[] = [
   {
     href: "/accueil",
@@ -64,12 +67,13 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: "/ajouter",
-    label: "Ajouter",
+    href: "/focus",
+    label: "Focus",
     icon: (
       <Icon>
         <circle cx="12" cy="12" r="8.5" />
-        <path d="M12 8.5v7M8.5 12h7" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="12" cy="12" r="0.6" fill="currentColor" />
       </Icon>
     ),
   },
@@ -84,6 +88,16 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
 ];
+
+const ADD_ITEM: NavItem = {
+  href: "/ajouter",
+  label: "Ajouter",
+  icon: (
+    <Icon>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  ),
+};
 
 const SEARCH_ICON = (
   <Icon>
@@ -155,7 +169,7 @@ export default function NavBar() {
             </Link>
           ))}
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-2">
             {expanded ? (
               <form onSubmit={submit} role="search" className="flex items-center gap-1">
                 <label className="sr-only" htmlFor="nav-search">
@@ -187,33 +201,69 @@ export default function NavBar() {
                 {SEARCH_ICON}
               </button>
             )}
+
+            {/* "Ajouter" est une action, pas une section : bouton plein plutot
+                qu'un onglet parmi d'autres. */}
+            <Link
+              href={ADD_ITEM.href}
+              className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600"
+            >
+              {ADD_ITEM.icon}
+              <span>{ADD_ITEM.label}</span>
+            </Link>
           </div>
         </div>
       </header>
 
+      {/* -------- Mobile : mini barre haute (marque + recherche) -------- */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b border-white/10 bg-zinc-950 px-4 sm:hidden">
+        <Link href="/accueil" className="flex items-center gap-1.5">
+          <BallMark className="h-5 w-5 text-orange-500" />
+          <span className="font-display text-sm font-semibold uppercase tracking-wide text-white">
+            Hoops<span className="text-orange-500">Archive</span>
+          </span>
+        </Link>
+        <Link
+          href="/recherche"
+          aria-current={onSearchPage ? "page" : undefined}
+          aria-label="Rechercher une carte"
+          className={`rounded-lg p-1.5 ${onSearchPage ? "text-orange-400" : "text-zinc-400"}`}
+        >
+          {SEARCH_ICON}
+        </Link>
+      </header>
+
       {/* -------- Mobile : barre basse -------- */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
-        <ul className="grid grid-cols-5">
-          {[
-            NAV_ITEMS[0],
-            NAV_ITEMS[1],
-            { href: "/recherche", label: "Recherche", icon: SEARCH_ICON },
-            NAV_ITEMS[2],
-            NAV_ITEMS[3],
-          ].map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={isActive(pathname, item.href) ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                  isActive(pathname, item.href) ? "text-orange-400" : "text-zinc-500"
-                }`}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            </li>
-          ))}
+        <ul className="grid grid-cols-5 items-end">
+          {[NAV_ITEMS[0], NAV_ITEMS[1], null, NAV_ITEMS[2], NAV_ITEMS[3]].map((item) =>
+            item ? (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={isActive(pathname, item.href) ? "page" : undefined}
+                  className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+                    isActive(pathname, item.href) ? "text-orange-400" : "text-zinc-500"
+                  }`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Link>
+              </li>
+            ) : (
+              <li key="add" className="flex items-center justify-center">
+                <Link
+                  href={ADD_ITEM.href}
+                  aria-label={ADD_ITEM.label}
+                  className="-translate-y-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-500 text-white shadow-[0_4px_14px_rgba(249,115,22,0.55)] ring-4 ring-zinc-950 transition active:scale-95"
+                >
+                  <Icon>
+                    <path d="M12 5v14M5 12h14" />
+                  </Icon>
+                </Link>
+              </li>
+            ),
+          )}
         </ul>
       </nav>
     </>
