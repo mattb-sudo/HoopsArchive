@@ -15,7 +15,10 @@ export interface CardTileProps {
 }
 
 function cardHref(card: CardWithState): string {
-  return `/carte/${encodeURIComponent(card.set_id)}/${encodeURIComponent(card.card_code)}`;
+  const base = `/carte/${encodeURIComponent(card.set_id)}/${encodeURIComponent(card.card_code)}`;
+  // Une tuile "parallele" pointe vers sa propre fiche (photo/infos independantes
+  // de la carte de base), pas vers la fiche de la carte normale.
+  return card.parallel ? `${base}/parallele/${encodeURIComponent(card.parallel.id)}` : base;
 }
 
 export default function CardTile({
