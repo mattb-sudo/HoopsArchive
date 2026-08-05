@@ -1,0 +1,321 @@
+-- =====================================================================
+-- Hoops Archive -- migration 0004 : catalogue des parallèles + suivi utilisateur
+-- Permet de cocher individuellement chaque parallèle connu d'une carte
+-- (ex. "Rainbow Yellow #/275") comme une entrée de collection à part entière,
+-- en complément (et non en remplacement) du champ libre `variant` existant.
+--
+-- Limite connue : la liste des parallèles est capturée par SET (pas par
+-- sous-ensemble). Un insert ou un autographe peut ne pas proposer tous les
+-- parallèles listés ici pour le set -- c'est à l'utilisateur de cocher ceux
+-- qui correspondent réellement à l'exemplaire qu'il possède.
+-- =====================================================================
+
+begin;
+
+-- 1. Catalogue en lecture seule, comme `cards`/`subsets`.
+create table if not exists public.parallels (
+  set_id   text not null references public.sets (id) on delete cascade,
+  id       text not null,
+  name     text not null,
+  format   text,
+  numbered int,
+  primary key (set_id, id)
+);
+
+-- 2. Etat utilisateur par carte + parallèle (une ligne = "je possède la
+--    version <parallèle> de la carte <card_code>").
+create table if not exists public.user_parallel_state (
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  set_id      text not null,
+  card_code   text not null,
+  parallel_id text not null,
+  owned       boolean not null default false,
+  qty         int not null default 0,
+  note        text,
+  photo_path  text,
+  date_added  timestamptz,
+  updated_at  timestamptz not null default now(),
+  primary key (user_id, set_id, card_code, parallel_id),
+  foreign key (set_id, card_code) references public.cards (set_id, card_code) on delete cascade,
+  foreign key (set_id, parallel_id) references public.parallels (set_id, id) on delete cascade
+);
+
+create index if not exists user_parallel_state_owned_idx
+  on public.user_parallel_state (user_id, owned);
+
+drop trigger if exists user_parallel_state_touch on public.user_parallel_state;
+create trigger user_parallel_state_touch
+  before update on public.user_parallel_state
+  for each row execute function public.touch_updated_at();
+
+-- 3. RLS : catalogue en lecture publique, etat utilisateur prive.
+alter table public.parallels           enable row level security;
+alter table public.user_parallel_state enable row level security;
+
+drop policy if exists "parallels_public_read" on public.parallels;
+create policy "parallels_public_read" on public.parallels
+  for select to anon, authenticated using (true);
+
+drop policy if exists "user_parallel_state_select_own" on public.user_parallel_state;
+create policy "user_parallel_state_select_own" on public.user_parallel_state
+  for select to authenticated using (user_id = auth.uid());
+
+drop policy if exists "user_parallel_state_insert_own" on public.user_parallel_state;
+create policy "user_parallel_state_insert_own" on public.user_parallel_state
+  for insert to authenticated with check (user_id = auth.uid());
+
+drop policy if exists "user_parallel_state_update_own" on public.user_parallel_state;
+create policy "user_parallel_state_update_own" on public.user_parallel_state
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "user_parallel_state_delete_own" on public.user_parallel_state;
+create policy "user_parallel_state_delete_own" on public.user_parallel_state
+  for delete to authenticated using (user_id = auth.uid());
+
+-- 4. Catalogue des parallèles (241, sur les 8 sets)
+insert into public.parallels (set_id, id, name, format, numbered) values
+  ('2025-26-topps-nba-hoops', 'rainbow', 'Rainbow', 'hobby/jumbo', null),
+  ('2025-26-topps-nba-hoops', 'pixel-burst', 'Pixel Burst', 'hobby/jumbo', null),
+  ('2025-26-topps-nba-hoops', 'rainbow-yellow', 'Rainbow Yellow', 'hobby/jumbo', 275),
+  ('2025-26-topps-nba-hoops', 'rainbow-green-blue', 'Rainbow Green & Blue', 'hobby/jumbo', 249),
+  ('2025-26-topps-nba-hoops', 'rainbow-gold-green', 'Rainbow Gold & Green', 'hobby/jumbo', 199),
+  ('2025-26-topps-nba-hoops', 'pixel-burst-blue', 'Pixel Burst Blue', 'hobby/jumbo', 149),
+  ('2025-26-topps-nba-hoops', 'pixel-burst-purple', 'Pixel Burst Purple', 'hobby/jumbo', 99),
+  ('2025-26-topps-nba-hoops', 'pixel-burst-green', 'Pixel Burst Green', 'hobby/jumbo', 75),
+  ('2025-26-topps-nba-hoops', 'pixel-burst-gold', 'Pixel Burst Gold', 'hobby/jumbo', 50),
+  ('2025-26-topps-nba-hoops', 'pixel-burst-orange', 'Pixel Burst Orange', 'hobby/jumbo', 25),
+  ('2025-26-topps-nba-hoops', 'pixel-burst-black', 'Pixel Burst Black', 'hobby/jumbo', 10),
+  ('2025-26-topps-nba-hoops', 'pixel-burst-red', 'Pixel Burst Red', 'hobby/jumbo', 5),
+  ('2025-26-topps-nba-hoops', 'pixel-burst-platinum', 'Pixel Burst Platinum', 'hobby/jumbo', 1),
+  ('2025-26-topps-nba-hoops', 'rainbow-retail', 'Rainbow', 'retail', null),
+  ('2025-26-topps-nba-hoops', 'light-burst', 'Light Burst', 'retail', null),
+  ('2025-26-topps-nba-hoops', 'fanatics', 'Fanatics', 'retail (Fanatics exclusif)', null),
+  ('2025-26-topps-nba-hoops', 'green-hoops', 'Green Hoops', 'retail (Blaster exclusif)', null),
+  ('2025-26-topps-nba-hoops', 'orange-hoops', 'Orange Hoops', 'retail (Hanger exclusif)', null),
+  ('2025-26-topps-nba-hoops', 'rainbow-teal', 'Rainbow Teal', 'retail', 299),
+  ('2025-26-topps-nba-hoops', 'rainbow-blue-yellow', 'Rainbow Blue & Yellow', 'retail', 275),
+  ('2025-26-topps-nba-hoops', 'rainbow-red-orange', 'Rainbow Red & Orange', 'retail', 249),
+  ('2025-26-topps-nba-hoops', 'rainbow-purple-blue', 'Rainbow Purple & Blue', 'retail', 199),
+  ('2025-26-topps-nba-hoops', 'light-burst-blue', 'Light Burst Blue', 'retail', 149),
+  ('2025-26-topps-nba-hoops', 'light-burst-purple', 'Light Burst Purple', 'retail', 99),
+  ('2025-26-topps-nba-hoops', 'light-burst-green', 'Light Burst Green', 'retail', 75),
+  ('2025-26-topps-nba-hoops', 'light-burst-gold', 'Light Burst Gold', 'retail', 50),
+  ('2025-26-topps-nba-hoops', 'light-burst-orange', 'Light Burst Orange', 'retail', 25),
+  ('2025-26-topps-nba-hoops', 'light-burst-black', 'Light Burst Black', 'retail', 10),
+  ('2025-26-topps-nba-hoops', 'light-burst-red', 'Light Burst Red', 'retail', 5),
+  ('2025-26-topps-nba-hoops', 'light-burst-platinum', 'Light Burst Platinum', 'retail', 1),
+  ('2025-26-topps-basketball', 'base-cards-i-team-color-border-variation', 'Base Cards I Team Color Border Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'base-cards-i-blackout-variation', 'Base Cards I Blackout Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'base-cards-i-clear-variation', 'Base Cards I Clear Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'combo-cards-team-color-border-variation', 'Combo Cards Team Color Border Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'combo-cards-clear-variation', 'Combo Cards Clear Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'combo-cards-blackout-variation', 'Combo Cards Blackout Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'base-cards-i-golden-mirror-image-variation', 'Base Cards I Golden Mirror Image Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'combo-cards-golden-mirror-image-variation', 'Combo Cards Golden Mirror Image Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'holo-foil', 'Holo Foil', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'green-holo-foil', 'Green Holo Foil', 'hobby/jumbo', 99),
+  ('2025-26-topps-basketball', 'gold-holo-foil', 'Gold Holo Foil', 'hobby/jumbo', 50),
+  ('2025-26-topps-basketball', 'orange-holo-foil', 'Orange Holo Foil', 'hobby/jumbo', 25),
+  ('2025-26-topps-basketball', 'black-holo-foil', 'Black Holo Foil', 'hobby/jumbo', 10),
+  ('2025-26-topps-basketball', 'red-holo-foil', 'Red Holo Foil', 'hobby/jumbo', 5),
+  ('2025-26-topps-basketball', 'platinum-holo-foil', 'Platinum Holo Foil', 'hobby/jumbo', 1),
+  ('2025-26-topps-basketball', 'rainbow-foilboard', 'Rainbow Foilboard', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'green-rainbow', 'Green Rainbow', 'hobby/jumbo', 99),
+  ('2025-26-topps-basketball', 'gold-rainbow', 'Gold Rainbow', 'hobby/jumbo', 50),
+  ('2025-26-topps-basketball', 'orange-rainbow', 'Orange Rainbow', 'hobby/jumbo', 25),
+  ('2025-26-topps-basketball', 'black-rainbow', 'Black Rainbow', 'hobby/jumbo', 10),
+  ('2025-26-topps-basketball', 'red-rainbow', 'Red Rainbow', 'hobby/jumbo', 5),
+  ('2025-26-topps-basketball', 'foilfractor', 'Foilfractor', 'hobby/jumbo', 1),
+  ('2025-26-topps-basketball', 'base', 'Base', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'base-rookie-autograph', 'Base Rookie Autograph', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'gold-rainbow-rookie-autograph', 'Gold Rainbow Rookie Autograph', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'orange-rainbow-rookie-autograph', 'Orange Rainbow Rookie Autograph', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'black-rainbow-rookie-autograph', 'Black Rainbow Rookie Autograph', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'red-rainbow-rookie-autograph-foilfractor', 'Red Rainbow Rookie Autograph Foilfractor', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'flash-drop-cart-load-shopping-spree-signatures-doorbuster', 'Flash Drop Cart Load Shopping Spree Signatures Doorbuster', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'flash-drop-cart-load-doorbuster', 'Flash Drop Cart Load Doorbuster', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'red', 'Red', 'hobby/jumbo', 5),
+  ('2025-26-topps-basketball', 'platinum', 'Platinum', 'hobby/jumbo', 1),
+  ('2025-26-topps-basketball', 'triple-autograph', 'Triple Autograph', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'black-rainbow-triple-autograph', 'Black Rainbow Triple Autograph', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'red-rainbow-triple-autograph-foilfractor', 'Red Rainbow Triple Autograph Foilfractor', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'pink', 'Pink', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'gold', 'Gold', 'hobby/jumbo', 2025),
+  ('2025-26-topps-basketball', 'green', 'Green', 'hobby/jumbo', 99),
+  ('2025-26-topps-basketball', 'orange', 'Orange', 'hobby/jumbo', 25),
+  ('2025-26-topps-basketball', 'black', 'Black', 'hobby/jumbo', 10),
+  ('2025-26-topps-basketball', 'purple-holo-foil', 'Purple Holo Foil', 'hobby/jumbo', 250),
+  ('2025-26-topps-basketball', 'blue-holo-foil', 'Blue Holo Foil', 'hobby/jumbo', 150),
+  ('2025-26-topps-basketball', 'purple-rainbow', 'Purple Rainbow', 'hobby/jumbo', 250),
+  ('2025-26-topps-basketball', 'blue-rainbow', 'Blue Rainbow', 'hobby/jumbo', 150),
+  ('2025-26-topps-basketball', 'surge-flash-drop-cart-load-cyber-circuit-doorbuster', 'Surge Flash Drop Cart Load Cyber Circuit Doorbuster', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'base-rainbow-foilboard', 'Base Rainbow Foilboard', 'hobby/jumbo', null),
+  ('2025-26-topps-basketball', 'red-foil-foilfractor', 'Red Foil Foilfractor', 'hobby/jumbo', 1),
+  ('2025-26-topps-basketball', 'base-player-number-variation', 'Base Player Number Variation', 'variation', null),
+  ('2025-26-topps-basketball', 'sp', 'Sp', 'hobby/jumbo', null),
+  ('2025-26-topps-holiday', 'golden-glitter-holiday-1', 'Golden Glitter Holiday', 'variation', 1),
+  ('2025-26-topps-holiday', 'golden-metallic-glitter-holiday-1', 'Golden Metallic Glitter Holiday', 'variation', 1),
+  ('2025-26-topps-holiday', 'green-glitter-holiday-5', 'Green Glitter Holiday', 'variation', 5),
+  ('2025-26-topps-holiday', 'green-metallic-glitter-holiday-5', 'Green Metallic Glitter Holiday', 'variation', 5),
+  ('2025-26-topps-holiday', 'red-glitter-holiday-10', 'Red Glitter Holiday', 'variation', 10),
+  ('2025-26-topps-holiday', 'red-metallic-glitter-holiday-10', 'Red Metallic Glitter Holiday', 'variation', 10),
+  ('2025-26-topps-holiday', 'glitter-holiday-25', 'Glitter Holiday', 'variation', 25),
+  ('2025-26-topps-holiday', 'orange-metallic-glitter-holiday-25', 'Orange Metallic Glitter Holiday', 'variation', 25),
+  ('2025-26-topps-holiday', 'glitter-holiday-99', 'Glitter Holiday', 'variation', 99),
+  ('2025-26-topps-holiday', 'purple-metallic-glitter-holiday-99', 'Purple Metallic Glitter Holiday', 'variation', 99),
+  ('2025-26-topps-holiday', 'purple-metallic-glitter-holiday-199', 'Purple Metallic Glitter Holiday', 'variation', 199),
+  ('2025-26-topps-holiday', 'blue-metallic-glitter-holiday-299', 'Blue Metallic Glitter Holiday', 'variation', 299),
+  ('2025-26-topps-holiday', 'blue-metallic-glitter-holiday', 'Blue Metallic Glitter Holiday', 'variation', null),
+  ('2025-26-topps-holiday', 'glitter-holiday', 'Glitter Holiday', 'variation', null),
+  ('2025-26-topps-holiday', 'light-blue-and-white-glitter-holiday', 'Light Blue And White Glitter Holiday', 'variation', null),
+  ('2025-26-topps-holiday', 'stocking-stuff-metallic-stocking', 'Stocking Stuff Metallic Stocking', 'variation', null),
+  ('2025-26-topps-holiday', 'stocking-stuffer-metallic-candy-cane', 'Stocking Stuffer Metallic Candy Cane', 'variation', null),
+  ('2025-26-topps-holiday', 'stocking-stuffer-metallic-holly', 'Stocking Stuffer Metallic Holly', 'variation', null),
+  ('2025-26-topps-holiday', 'stocking-stuffer-metallic-ornament', 'Stocking Stuffer Metallic Ornament', 'variation', null),
+  ('2025-26-topps-holiday', 'stocking-stuffer-metallic-santa-bag', 'Stocking Stuffer Metallic Santa Bag', 'variation', null),
+  ('2025-26-topps-chrome', 'refractors-box-set', 'Refractors Box Set', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-silver-basketball', 'Refractors Silver Basketball', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-skylight', 'Refractors Skylight', 'chrome', null),
+  ('2025-26-topps-chrome', 'base', 'Base', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire', 'Sapphire', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-pulsar', 'Refractors Pulsar', 'chrome', null),
+  ('2025-26-topps-chrome', 'x-fractors', 'X-Fractors', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors', 'Refractors', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-red-white-and-blue', 'Refractors Red White And Blue', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-raywave', 'Refractors Raywave', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-prism', 'Refractors Prism', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-gold', 'Sapphire Gold', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-basketball', 'Refractors Basketball', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-orange', 'Sapphire Orange', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-wave', 'Refractors Wave', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-purple', 'Sapphire Purple', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-black', 'Sapphire Black', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-negative', 'Refractors Negative', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-red', 'Sapphire Red', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-first-day-issue', 'Refractors First Day Issue', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-blue-blue-basketball', 'Refractors Blue Blue Basketball', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-padpardascha', 'Refractors Padpardascha', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-lightboard-logos', 'Refractors Lightboard Logos', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-green-basketball', 'Refractors Green Basketball', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-magenta-399', 'Refractors Magenta #/399', 'chrome', 399),
+  ('2025-26-topps-chrome', 'refractors-teal-299', 'Refractors Teal #/299', 'chrome', 299),
+  ('2025-26-topps-chrome', 'refractors-yellow-275', 'Refractors Yellow #/275', 'chrome', 275),
+  ('2025-26-topps-chrome', 'refractors-yellow-basketball-275', 'Refractors Yellow Basketball #/275', 'chrome', 275),
+  ('2025-26-topps-chrome', 'refractors-raywave-yellow-275', 'Refractors Raywave Yellow #/275', 'chrome', 275),
+  ('2025-26-topps-chrome', 'refractors-raywave-aqua-199', 'Refractors Raywave Aqua #/199', 'chrome', 199),
+  ('2025-26-topps-chrome', 'refractors-aqua-199', 'Refractors Aqua #/199', 'chrome', 199),
+  ('2025-26-topps-chrome', 'refractors-aqua-basketball-199', 'Refractors Aqua Basketball #/199', 'chrome', 199),
+  ('2025-26-topps-chrome', 'refractors-blue-wave-150', 'Refractors Blue Wave #/150', 'chrome', 150),
+  ('2025-26-topps-chrome', 'refractors-blue-150', 'Refractors Blue #/150', 'chrome', 150),
+  ('2025-26-topps-chrome', 'refractors-raywave-blue-150', 'Refractors Raywave Blue #/150', 'chrome', 150),
+  ('2025-26-topps-chrome', 'refractors-raywave-green-99', 'Refractors Raywave Green #/99', 'chrome', 99),
+  ('2025-26-topps-chrome', 'refractors-green-wave-99', 'Refractors Green Wave #/99', 'chrome', 99),
+  ('2025-26-topps-chrome', 'refractors-green-99', 'Refractors Green #/99', 'chrome', 99),
+  ('2025-26-topps-chrome', 'refractors-pulsar-purple-75', 'Refractors Pulsar Purple #/75', 'chrome', 75),
+  ('2025-26-topps-chrome', 'refractors-raywave-purple-75', 'Refractors Raywave Purple #/75', 'chrome', 75),
+  ('2025-26-topps-chrome', 'refractors-purple-wave-75', 'Refractors Purple Wave #/75', 'chrome', 75),
+  ('2025-26-topps-chrome', 'refractors-purple-75', 'Refractors Purple #/75', 'chrome', 75),
+  ('2025-26-topps-chrome', 'refractors-purple-basketball-75', 'Refractors Purple Basketball #/75', 'chrome', 75),
+  ('2025-26-topps-chrome', 'refractors-geometric-gold-50', 'Refractors Geometric Gold #/50', 'chrome', 50),
+  ('2025-26-topps-chrome', 'refractors-pulsar-gold-50', 'Refractors Pulsar Gold #/50', 'chrome', 50),
+  ('2025-26-topps-chrome', 'refractors-raywave-gold-50', 'Refractors Raywave Gold #/50', 'chrome', 50),
+  ('2025-26-topps-chrome', 'refractors-gold-wave-50', 'Refractors Gold Wave #/50', 'chrome', 50),
+  ('2025-26-topps-chrome', 'refractors-gold-50', 'Refractors Gold #/50', 'chrome', 50),
+  ('2025-26-topps-chrome', 'refractors-gold-basketball-50', 'Refractors Gold Basketball #/50', 'chrome', 50),
+  ('2025-26-topps-chrome', 'refractors-geometric-orange-25', 'Refractors Geometric Orange #/25', 'chrome', 25),
+  ('2025-26-topps-chrome', 'refractors-pulsar-orange-25', 'Refractors Pulsar Orange #/25', 'chrome', 25),
+  ('2025-26-topps-chrome', 'refractors-raywave-orange-25', 'Refractors Raywave Orange #/25', 'chrome', 25),
+  ('2025-26-topps-chrome', 'refractors-orange-wave-25', 'Refractors Orange Wave #/25', 'chrome', 25),
+  ('2025-26-topps-chrome', 'refractors-orange-25', 'Refractors Orange #/25', 'chrome', 25),
+  ('2025-26-topps-chrome', 'refractors-orange-basketball-25', 'Refractors Orange Basketball #/25', 'chrome', 25),
+  ('2025-26-topps-chrome', 'refractors-geometric-black-10', 'Refractors Geometric Black #/10', 'chrome', 10),
+  ('2025-26-topps-chrome', 'refractors-pulsar-black-10', 'Refractors Pulsar Black #/10', 'chrome', 10),
+  ('2025-26-topps-chrome', 'refractors-raywave-black-10', 'Refractors Raywave Black #/10', 'chrome', 10),
+  ('2025-26-topps-chrome', 'refractors-black-wave-10', 'Refractors Black Wave #/10', 'chrome', 10),
+  ('2025-26-topps-chrome', 'refractors-black-10', 'Refractors Black #/10', 'chrome', 10),
+  ('2025-26-topps-chrome', 'refractors-black-basketball-10', 'Refractors Black Basketball #/10', 'chrome', 10),
+  ('2025-26-topps-chrome', 'refractors-geometric-red-5', 'Refractors Geometric Red #/5', 'chrome', 5),
+  ('2025-26-topps-chrome', 'refractors-pulsar-red-5', 'Refractors Pulsar Red #/5', 'chrome', 5),
+  ('2025-26-topps-chrome', 'refractors-raywave-red-5', 'Refractors Raywave Red #/5', 'chrome', 5),
+  ('2025-26-topps-chrome', 'refractors-red-wave-5', 'Refractors Red Wave #/5', 'chrome', 5),
+  ('2025-26-topps-chrome', 'refractors-red-5', 'Refractors Red #/5', 'chrome', 5),
+  ('2025-26-topps-chrome', 'refractors-red-basketball-5', 'Refractors Red Basketball #/5', 'chrome', 5),
+  ('2025-26-topps-chrome', 'refractors-geometric-white-2', 'Refractors Geometric White #/2', 'chrome', 2),
+  ('2025-26-topps-chrome', 'superfractors-1', 'Superfractors #/1', 'chrome', 1),
+  ('2025-26-topps-chrome', 'frozenfractors-1-2-3-4-5', 'Frozenfractors #/-1, -2, -3, -4, -5', 'chrome', -1),
+  ('2025-26-topps-chrome', 'refractors-geometric', 'Refractors Geometric', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-red-refactors-topps-autograph-issue-rookies-ii', 'Sapphire Red Refactors Topps Autograph Issue Rookies II', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-padpardascha-ii', 'Sapphire Padpardascha II', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-geometric-purple-75', 'Refractors Geometric Purple #/75', 'chrome', 75),
+  ('2025-26-topps-chrome', 'sapphire-red-refactors', 'Sapphire Red Refactors', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-padpardascha', 'Sapphire Padpardascha', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-black-sky-write-signatures-refactors', 'Sapphire Black Sky-Write Signatures Refactors', 'chrome', null),
+  ('2025-26-topps-chrome', 'base-refactors', 'Base Refactors', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-padpardascha-refactors', 'Sapphire Padpardascha Refactors', 'chrome', null),
+  ('2025-26-topps-chrome', 'sapphire-red-topps-chrome-autographs', 'Sapphire Red Topps Chrome Autographs', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-geometric-green-99', 'Refractors Geometric Green #/99', 'chrome', 99),
+  ('2025-26-topps-chrome', 'base-card-variations', 'Base Card Variations', 'chrome', null),
+  ('2025-26-topps-chrome', 'refractors-green-speckle-99', 'Refractors Green Speckle #/99', 'chrome', 99),
+  ('2025-26-topps-chrome', 'refractors-gold-speckle-50', 'Refractors Gold Speckle #/50', 'chrome', 50),
+  ('2025-26-topps-chrome', 'refractors-orange-speckle-25', 'Refractors Orange Speckle #/25', 'chrome', 25),
+  ('2025-26-topps-chrome', 'refractors-black-speckle-10', 'Refractors Black Speckle #/10', 'chrome', 10),
+  ('2025-26-topps-chrome', 'refractors-red-speckle-5', 'Refractors Red Speckle #/5', 'chrome', 5),
+  ('2025-26-topps-chrome', 'base-gold-orange-red', 'Base Gold Orange Red', 'chrome', null),
+  ('2025-26-topps-chrome-sapphire', 'sapphire-purple', 'Sapphire Purple', 'hobby', 75),
+  ('2025-26-topps-chrome-sapphire', 'sapphire-gold', 'Sapphire Gold', 'hobby', 50),
+  ('2025-26-topps-chrome-sapphire', 'sapphire-orange', 'Sapphire Orange', 'hobby', 25),
+  ('2025-26-topps-chrome-sapphire', 'sapphire-black', 'Sapphire Black', 'hobby', 10),
+  ('2025-26-topps-chrome-sapphire', 'sapphire-red', 'Sapphire Red', 'hobby', 5),
+  ('2025-26-topps-chrome-sapphire', 'sapphire-padpardascha', 'Sapphire Padpardascha', 'hobby', 1),
+  ('2025-26-topps-chrome-sapphire', 'superfractor', 'Superfractor', 'hobby', 1),
+  ('2025-26-topps-midnight', 'zodiac', 'Zodiac', 'hobby', null),
+  ('2025-26-topps-midnight', 'moon-beam', 'Moon Beam', 'hobby', null),
+  ('2025-26-topps-midnight', 'twilight', 'Twilight', 'hobby', 199),
+  ('2025-26-topps-midnight', 'morning', 'Morning', 'hobby', 149),
+  ('2025-26-topps-midnight', 'dusk', 'Dusk', 'hobby', 75),
+  ('2025-26-topps-midnight', 'summer-solstice', 'Summer Solstice', 'hobby', 50),
+  ('2025-26-topps-midnight', 'winter-solstice', 'Winter Solstice', 'hobby', 35),
+  ('2025-26-topps-midnight', 'moonrise', 'Moonrise', 'hobby', 25),
+  ('2025-26-topps-midnight', 'equinox', 'Equinox', 'hobby', 20),
+  ('2025-26-topps-midnight', 'midnight', 'Midnight', 'hobby', 12),
+  ('2025-26-topps-midnight', 'daybreak', 'Daybreak', 'hobby', 5),
+  ('2025-26-topps-midnight', 'witching-hour', 'Witching Hour', 'hobby', 3),
+  ('2025-26-topps-midnight', 'black-light', 'Black Light', 'hobby', 1),
+  ('2025-26-topps-finest', 'base-finest', 'Base', 'hobby', null),
+  ('2025-26-topps-finest', 'geometric', 'Geometric', 'hobby', null),
+  ('2025-26-topps-finest', 'oil-spill', 'Oil Spill', 'hobby', null),
+  ('2025-26-topps-finest', 'refractor', 'Refractor', 'hobby', null),
+  ('2025-26-topps-finest', 'xfractor', 'Xfractor', 'hobby', null),
+  ('2025-26-topps-finest', 'sky-blue', 'Sky Blue', 'hobby', 350),
+  ('2025-26-topps-finest', 'purple', 'Purple', 'hobby', 250),
+  ('2025-26-topps-finest', 'blue', 'Blue', 'hobby', 200),
+  ('2025-26-topps-finest', 'blue-xfractor', 'Blue Xfractor', 'hobby', 200),
+  ('2025-26-topps-finest', 'purple-xfractor', 'Purple Xfractor', 'hobby', 150),
+  ('2025-26-topps-finest', 'purple-geometric', 'Purple Geometric', 'hobby', 100),
+  ('2025-26-topps-finest', 'blue-geometric', 'Blue Geometric', 'hobby', 100),
+  ('2025-26-topps-finest', 'green', 'Green', 'hobby', 75),
+  ('2025-26-topps-finest', 'gold-geometric', 'Gold Geometric', 'hobby', 50),
+  ('2025-26-topps-finest', 'gold', 'Gold', 'hobby', 50),
+  ('2025-26-topps-finest', 'red-black-geometric', 'Red/Black Geometric', 'hobby', 25),
+  ('2025-26-topps-finest', 'orange', 'Orange', 'hobby', 25),
+  ('2025-26-topps-finest', 'black', 'Black', 'hobby', 15),
+  ('2025-26-topps-finest', 'red-geometric', 'Red Geometric', 'hobby', 10),
+  ('2025-26-topps-finest', 'red', 'Red', 'hobby', 10),
+  ('2025-26-topps-finest', 'black-geometric', 'Black Geometric', 'hobby', 1),
+  ('2025-26-topps-finest', 'superfractor', 'Superfractor', 'hobby', 1),
+  ('2025-26-topps-finest', 'yellow-geometric', 'Yellow Geometric', 'hobby', 35),
+  ('2025-26-topps-finest', 'orange-geometric', 'Orange Geometric', 'hobby', 15),
+  ('2025-26-topps-finest', 'red-black-vapor', 'Red/Black Vapor', 'hobby', 10),
+  ('2025-26-topps-finest', 'die-cut', 'Die Cut', 'hobby', 75),
+  ('2025-26-topps-three', 'base', 'Base', 'hobby', 49),
+  ('2025-26-topps-three', 'bronze', 'Bronze', 'hobby', 25),
+  ('2025-26-topps-three', 'blue', 'Blue', 'hobby', 3),
+  ('2025-26-topps-three', 'gold', 'Gold', 'hobby', 3),
+  ('2025-26-topps-three', 'red', 'Red', 'hobby', 3),
+  ('2025-26-topps-three', 'platinum', 'Platinum', 'hobby', 3),
+  ('2025-26-topps-three', 'emerald', 'Emerald', 'hobby', null),
+  ('2025-26-topps-three', 'holo-gold', 'Holo Gold', 'hobby', 3)
+on conflict (set_id, id) do update set
+  name = excluded.name, format = excluded.format, numbered = excluded.numbered;
+
+commit;

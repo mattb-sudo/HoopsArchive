@@ -34,6 +34,35 @@ export interface CardRow {
   jersey_number: string | null;
 }
 
+export interface ParallelRow {
+  set_id: string;
+  id: string;
+  name: string;
+  format: string | null;
+  numbered: number | null;
+}
+
+/** Etat de possession de l'utilisateur pour un parallele donne d'une carte. */
+export interface UserParallelStateRow {
+  user_id: string;
+  set_id: string;
+  card_code: string;
+  parallel_id: string;
+  owned: boolean;
+  qty: number;
+  note: string | null;
+  photo_path: string | null;
+  date_added: string | null;
+  updated_at: string;
+}
+
+/** Un parallele du catalogue, enrichi de l'etat de possession sur une carte precise. */
+export interface ParallelWithState extends ParallelRow {
+  owned: boolean;
+  qty: number;
+  date_added: string | null;
+}
+
 export interface CardPlayerRow {
   set_id: string;
   card_code: string;

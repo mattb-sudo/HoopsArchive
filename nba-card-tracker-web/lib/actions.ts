@@ -246,6 +246,83 @@ export async function updateCardDetailsAction(
 }
 
 // ---------------------------------------------------------------------------
+// Parallèles (une entrée cochable par parallèle connu d'une carte)
+// ---------------------------------------------------------------------------
+
+async function readParallelState(
+  setId: string,
+  cardCode: string,
+  parallelId: string,
+): Promise<{ owned: boolean; qty: number; date_added: string | null }> {
+  const supabase = createSupabaseServerClient();
+  const { data } = await supabase
+    .from("user_parallel_state")
+    .select("owned, qty, date_added")
+    .eq("set_id", setId)
+    .eq("card_code", cardCode)
+    .eq("parallel_id", parallelId)
+    .maybeSingle();
+  if (!data) return { owned: false, qty: 0, date_added: null };
+  const row = data as { owned?: boolean; qty?: number; date_added?: string | null };
+  return { owned: row.owned ?? false, qty: row.qty ?? 0, date_added: row.date_added ?? null };
+}
+
+export async function toggleParallelOwnedAction(
+  setId: string,
+  cardCode: string,
+  parallelId: string,
+  owned: boolean,
+): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const supabase = createSupabaseServerClient();
+  const previous = await readParallelState(setId, cardCode, parallelId);
+
+  const { error } = await supabase.from("user_parallel_state").upsert({
+    user_id: user.id,
+    set_id: setId,
+    card_code: cardCode,
+    parallel_id: parallelId,
+    owned,
+    qty: owned ? Math.max(previous.qty, 1) : 0,
+    date_added: owned ? (previous.date_added ?? new Date().toISOString()) : null,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  refreshCollectionViews(setId, cardCode);
+  return { ok: true };
+}
+
+export async function setParallelQtyAction(
+  setId: string,
+  cardCode: string,
+  parallelId: string,
+  qty: number,
+): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const safeQty = Number.isFinite(qty) ? Math.max(0, Math.min(99, Math.trunc(qty))) : 0;
+  const supabase = createSupabaseServerClient();
+  const previous = await readParallelState(setId, cardCode, parallelId);
+
+  const { error } = await supabase.from("user_parallel_state").upsert({
+    user_id: user.id,
+    set_id: setId,
+    card_code: cardCode,
+    parallel_id: parallelId,
+    qty: safeQty,
+    owned: safeQty > 0,
+    date_added: safeQty > 0 ? (previous.date_added ?? new Date().toISOString()) : null,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  refreshCollectionViews(setId, cardCode);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
 // Session d'ajout rapide (/ajouter)
 // ---------------------------------------------------------------------------
 

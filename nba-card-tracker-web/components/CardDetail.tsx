@@ -6,13 +6,15 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import CardVisual from "./CardVisual";
 import {
   removeCardPhotoAction,
+  setParallelQtyAction,
   setQtyAction,
   toggleOwnedAction,
+  toggleParallelOwnedAction,
   updateCardDetailsAction,
   uploadCardPhotoAction,
 } from "@/lib/actions";
 import { formatDateFr } from "@/lib/cards";
-import type { CardPlayerRow, CardWithState } from "@/lib/types";
+import type { CardPlayerRow, CardWithState, ParallelWithState } from "@/lib/types";
 
 export interface CardDetailProps {
   card: CardWithState;
@@ -22,6 +24,8 @@ export interface CardDetailProps {
   setName: string;
   signers: CardPlayerRow[];
   photoUrl: string | null;
+  /** Parallèles connus du set, avec l'etat de possession pour cette carte precise. */
+  parallels: ParallelWithState[];
   prevCode: string | null;
   nextCode: string | null;
 }
@@ -38,6 +42,7 @@ export default function CardDetail({
   setName,
   signers,
   photoUrl,
+  parallels,
   prevCode,
   nextCode,
 }: CardDetailProps) {
@@ -47,6 +52,8 @@ export default function CardDetail({
   const [variant, setVariant] = useState(card.variant ?? "");
   const [note, setNote] = useState(card.note ?? "");
   const [noteOpen, setNoteOpen] = useState(Boolean(card.note));
+  const [parallelState, setParallelState] = useState(parallels);
+  const [parallelsOpen, setParallelsOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -114,6 +121,37 @@ export default function CardDetail({
     setOwned(safe > 0);
     startTransition(async () => {
       const res = await setQtyAction(card.set_id, card.card_code, safe);
+      if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
+      else flash("Quantité enregistrée.");
+    });
+  }
+
+  function toggleParallel(parallelId: string, next: boolean) {
+    setParallelState((list) =>
+      list.map((p) =>
+        p.id === parallelId ? { ...p, owned: next, qty: next ? Math.max(p.qty, 1) : 0 } : p,
+      ),
+    );
+    startTransition(async () => {
+      const res = await toggleParallelOwnedAction(card.set_id, card.card_code, parallelId, next);
+      if (!res.ok) {
+        setParallelState((list) =>
+          list.map((p) => (p.id === parallelId ? { ...p, owned: !next } : p)),
+        );
+        setError(res.error ?? "Enregistrement impossible.");
+      } else {
+        flash(next ? "Parallèle ajouté." : "Parallèle retiré.");
+      }
+    });
+  }
+
+  function changeParallelQty(parallelId: string, next: number) {
+    const safe = Math.max(0, Math.min(99, next));
+    setParallelState((list) =>
+      list.map((p) => (p.id === parallelId ? { ...p, qty: safe, owned: safe > 0 } : p)),
+    );
+    startTransition(async () => {
+      const res = await setParallelQtyAction(card.set_id, card.card_code, parallelId, safe);
       if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
       else flash("Quantité enregistrée.");
     });
@@ -371,6 +409,84 @@ export default function CardDetail({
               />
             </div>
           </div>
+
+          {/* Parallèles connus du set — chacun cochable independamment */}
+          {parallelState.length > 0 ? (
+            <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+              <button
+                type="button"
+                onClick={() => setParallelsOpen((open) => !open)}
+                aria-expanded={parallelsOpen}
+                className="flex w-full items-center justify-between px-3 py-2 text-sm font-semibold"
+              >
+                <span>
+                  Parallèles
+                  <span className="ml-1.5 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                    {parallelState.filter((p) => p.owned).length}/{parallelState.length}
+                  </span>
+                </span>
+                <span aria-hidden className="text-zinc-400">
+                  {parallelsOpen ? "▴" : "▾"}
+                </span>
+              </button>
+              {parallelsOpen ? (
+                <div className="border-t border-zinc-200 px-3 py-2 dark:border-zinc-800">
+                  <p className="mb-2 text-[10px] leading-snug text-zinc-400">
+                    Liste des parallèles connus de {setName} — coche ceux que tu possèdes
+                    réellement pour cette carte (la liste n&apos;est pas garantie spécifique à ce
+                    sous-ensemble).
+                  </p>
+                  <ul className="space-y-1.5">
+                    {parallelState.map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={p.owned}
+                          disabled={pending}
+                          onChange={(e) => toggleParallel(p.id, e.target.checked)}
+                          className="h-4 w-4 shrink-0 accent-orange-500"
+                        />
+                        <span className="min-w-0 flex-1 truncate text-xs">
+                          {p.name}
+                          {p.numbered ? (
+                            <span className="ml-1 font-mono text-zinc-400">#/{p.numbered}</span>
+                          ) : null}
+                        </span>
+                        {p.owned ? (
+                          <div className="flex shrink-0 items-center overflow-hidden rounded-md border border-zinc-300 dark:border-zinc-700">
+                            <button
+                              type="button"
+                              onClick={() => changeParallelQty(p.id, p.qty - 1)}
+                              disabled={pending || p.qty <= 0}
+                              aria-label={`Retirer un exemplaire de ${p.name}`}
+                              className="px-1.5 py-0.5 text-xs font-bold disabled:opacity-40"
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center font-mono text-[11px] tabular-nums">
+                              {p.qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => changeParallelQty(p.id, p.qty + 1)}
+                              disabled={pending}
+                              aria-label={`Ajouter un exemplaire de ${p.name}`}
+                              className="px-1.5 py-0.5 text-xs font-bold disabled:opacity-40"
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* Note repliable */}
           <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">

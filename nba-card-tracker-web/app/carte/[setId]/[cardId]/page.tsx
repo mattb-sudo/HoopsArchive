@@ -5,6 +5,7 @@ import SetupNotice from "@/components/SetupNotice";
 import { subsetLabel } from "@/lib/cards";
 import {
   getCardPlayersForCard,
+  getParallelsForCard,
   getSetView,
   getSignedPhotoUrl,
   requireUser,
@@ -33,9 +34,10 @@ export default async function CartePage({ params }: PageProps) {
   if (index < 0) notFound();
 
   const card = view.cards[index];
-  const [signers, photoUrl] = await Promise.all([
+  const [signers, photoUrl, parallels] = await Promise.all([
     getCardPlayersForCard(setId, cardCode),
     getSignedPhotoUrl(card.photo_path),
+    getParallelsForCard(setId, cardCode),
   ]);
 
   return (
@@ -46,6 +48,7 @@ export default async function CartePage({ params }: PageProps) {
       subsetName={subsetLabel(card.subset, view.subsets)}
       signers={signers}
       photoUrl={photoUrl}
+      parallels={parallels}
       prevCode={index > 0 ? view.cards[index - 1].card_code : null}
       nextCode={index < view.cards.length - 1 ? view.cards[index + 1].card_code : null}
     />
