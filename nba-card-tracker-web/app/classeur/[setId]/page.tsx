@@ -28,7 +28,7 @@ export default async function ClasseurPage({ params, searchParams }: PageProps) 
   const [view, profile] = await Promise.all([getSetView(setId), getProfile(user.id)]);
   if (!view) notFound();
 
-  const { set, subsets, cards } = view;
+  const { set, subsets, displayCards: cards } = view;
   const progress = progressOf(cards);
 
   return (

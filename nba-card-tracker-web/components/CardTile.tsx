@@ -26,7 +26,18 @@ export default function CardTile({
   onToggle,
   showSetName = false,
 }: CardTileProps) {
-  const checkbox = (
+  // Une tuile "parallele" represente un exemplaire coche depuis la fiche
+  // carte : pas de case a cocher ici (on evite de dupliquer la gestion de
+  // l'etat a deux endroits), juste un badge identifiant le parallele. Pour
+  // le retirer, on retourne sur la fiche carte.
+  const checkbox = card.parallel ? (
+    <span
+      title={card.parallel.name}
+      className="max-w-full truncate rounded-full bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
+    >
+      {card.parallel.name}
+    </span>
+  ) : (
     <label
       className="flex cursor-pointer items-center justify-center"
       onClick={(event) => event.stopPropagation()}
@@ -40,7 +51,7 @@ export default function CardTile({
         checked={card.owned}
         disabled={pending}
         onChange={(event) => onToggle(card, event.target.checked)}
-        className="h-5 w-5 cursor-pointer rounded border-2 border-white/80 bg-black/40 accent-orange-500 shadow"
+        className="h-4 w-4 cursor-pointer rounded border-2 border-zinc-400 accent-orange-500 dark:border-zinc-600"
       />
     </label>
   );
@@ -89,7 +100,7 @@ export default function CardTile({
   }
 
   return (
-    <div className={`group relative ${pending ? "opacity-60" : ""}`}>
+    <div className={`group relative flex flex-col gap-1 ${pending ? "opacity-60" : ""}`}>
       <Link
         href={cardHref(card)}
         className="block rounded-lg transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 group-hover:-translate-y-0.5"
@@ -106,16 +117,20 @@ export default function CardTile({
         />
       </Link>
 
-      {/* Case a cocher posee directement sur la tuile */}
-      <div className="absolute bottom-1.5 right-1.5 rounded bg-black/35 p-1 backdrop-blur-sm">
+      {/*
+        Ligne d'actions SOUS la vignette (pas superposee a l'image) : evite
+        tout chevauchement avec le nom du joueur affiche en bas du visuel.
+      */}
+      <div className="flex items-center justify-between px-0.5">
+        {card.qty > 1 ? (
+          <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-black shadow-sm">
+            ×{card.qty}
+          </span>
+        ) : (
+          <span />
+        )}
         {checkbox}
       </div>
-
-      {card.qty > 1 ? (
-        <span className="absolute left-1.5 bottom-1.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-black">
-          ×{card.qty}
-        </span>
-      ) : null}
     </div>
   );
 }

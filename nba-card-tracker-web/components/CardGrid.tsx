@@ -72,12 +72,17 @@ export default function CardGrid({
   const [sort, setSort] = useState<SortMode>("number");
   const [view, setView] = useState<ViewMode>(initialView);
 
-  const keyOf = (card: CardWithState) => `${card.set_id} ${card.card_code}`;
+  // Une carte normale et son parallele coche partagent le meme card_code :
+  // la cle doit distinguer les deux pour les overrides optimistes / etats en
+  // attente (sinon on melangerait leurs etats respectifs).
+  const keyOf = (card: CardWithState) =>
+    `${card.set_id} ${card.card_code} ${card.parallel?.id ?? ""}`;
 
-  /** Cartes reelles + surcouche optimiste. */
+  /** Cartes reelles + surcouche optimiste (les tuiles "parallele" ne sont pas basculables ici). */
   const effective = useMemo(
     () =>
       cards.map((card) => {
+        if (card.parallel) return card;
         const patch = overrides[keyOf(card)];
         return patch ? { ...card, ...patch } : card;
       }),
@@ -312,7 +317,7 @@ export default function CardGrid({
                 >
                   {section.cards.map((card) => (
                     <CardTile
-                      key={`${card.set_id}-${card.card_code}`}
+                      key={keyOf(card)}
                       card={card}
                       subsetLabel={
                         groupBy === "subset" ? null : (subsetById.get(card.subset ?? "")?.name ?? null)

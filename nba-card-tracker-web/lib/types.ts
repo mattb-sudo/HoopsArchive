@@ -120,6 +120,13 @@ export interface CardWithState extends CardRow {
   note: string | null;
   photo_path: string | null;
   date_added: string | null;
+  /**
+   * Presente uniquement sur les entrees "virtuelles" generees pour un
+   * parallele coche sur la fiche carte (voir `getOwnedParallelInstances`).
+   * Une carte normale possedee + un parallele coche de la meme carte donnent
+   * ainsi 2 entrees distinctes et cumulables dans les grilles/compteurs.
+   */
+  parallel?: { id: string; name: string; numbered: number | null } | null;
 }
 
 export interface Progress {
