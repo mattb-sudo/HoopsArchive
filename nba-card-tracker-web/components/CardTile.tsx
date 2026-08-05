@@ -32,7 +32,7 @@ export default function CardTile({
   // le retirer, on retourne sur la fiche carte.
   const checkbox = card.parallel ? (
     <span
-      title={card.parallel.name}
+      title={card.note ? `${card.parallel.name} — ${card.note}` : card.parallel.name}
       className="max-w-full truncate rounded-full bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
     >
       {card.parallel.name}

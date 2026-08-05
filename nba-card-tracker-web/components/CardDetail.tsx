@@ -6,12 +6,15 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import CardVisual from "./CardVisual";
 import {
   removeCardPhotoAction,
+  removeParallelPhotoAction,
+  setParallelNoteAction,
   setParallelQtyAction,
   setQtyAction,
   toggleOwnedAction,
   toggleParallelOwnedAction,
   updateCardDetailsAction,
   uploadCardPhotoAction,
+  uploadParallelPhotoAction,
 } from "@/lib/actions";
 import { formatDateFr } from "@/lib/cards";
 import type { CardPlayerRow, CardWithState, ParallelWithState } from "@/lib/types";
@@ -158,6 +161,67 @@ export default function CardDetail({
       const res = await setParallelQtyAction(card.set_id, card.card_code, parallelId, safe);
       if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
       else flash("Quantité enregistrée.");
+    });
+  }
+
+  function uploadParallelPhoto(parallelId: string, file: File, side: "front" | "back") {
+    const formData = new FormData();
+    formData.set("setId", card.set_id);
+    formData.set("cardCode", card.card_code);
+    formData.set("parallelId", parallelId);
+    formData.set("side", side);
+    formData.set("photo", file);
+    startTransition(async () => {
+      const res = await uploadParallelPhotoAction(formData);
+      if (!res.ok) {
+        setError(res.error ?? "Envoi impossible.");
+        return;
+      }
+      setParallelState((list) =>
+        list.map((p) =>
+          p.id === parallelId
+            ? side === "back"
+              ? { ...p, photo_back_url: res.url ?? null }
+              : { ...p, photo_url: res.url ?? null }
+            : p,
+        ),
+      );
+      flash(side === "back" ? "Photo du verso enregistrée." : "Photo enregistrée.");
+    });
+  }
+
+  function removeParallelPhoto(parallelId: string, side: "front" | "back") {
+    startTransition(async () => {
+      const res = await removeParallelPhotoAction(card.set_id, card.card_code, parallelId, side);
+      if (!res.ok) {
+        setError(res.error ?? "Suppression impossible.");
+        return;
+      }
+      setParallelState((list) =>
+        list.map((p) =>
+          p.id === parallelId
+            ? side === "back"
+              ? { ...p, photo_back_url: null }
+              : { ...p, photo_url: null }
+            : p,
+        ),
+      );
+      flash(side === "back" ? "Photo du verso supprimée." : "Photo supprimée.");
+    });
+  }
+
+  function updateParallelNote(parallelId: string, note: string) {
+    setParallelState((list) => list.map((p) => (p.id === parallelId ? { ...p, note } : p)));
+  }
+
+  function saveParallelNote(parallelId: string, note: string) {
+    const trimmed = note.trim();
+    const original = parallels.find((p) => p.id === parallelId)?.note ?? "";
+    if (original === trimmed) return;
+    startTransition(async () => {
+      const res = await setParallelNoteAction(card.set_id, card.card_code, parallelId, trimmed);
+      if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
+      else flash("Info enregistrée.");
     });
   }
 
@@ -475,50 +539,125 @@ export default function CardDetail({
                   <p className="mb-2 text-[10px] leading-snug text-zinc-400">
                     Liste des parallèles connus de {setName} — coche ceux que tu possèdes
                     réellement pour cette carte (la liste n&apos;est pas garantie spécifique à ce
-                    sous-ensemble).
+                    sous-ensemble). Chaque parallèle coché devient un exemplaire à part avec sa
+                    propre photo et sa propre info : il apparaît séparément dans le classeur.
                   </p>
                   <ul className="space-y-1.5">
                     {parallelState.map((p) => (
                       <li
                         key={p.id}
-                        className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                        className="rounded-lg px-1.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
                       >
-                        <input
-                          type="checkbox"
-                          checked={p.owned}
-                          disabled={pending}
-                          onChange={(e) => toggleParallel(p.id, e.target.checked)}
-                          className="h-4 w-4 shrink-0 accent-orange-500"
-                        />
-                        <span className="min-w-0 flex-1 truncate text-xs">
-                          {p.name}
-                          {p.numbered ? (
-                            <span className="ml-1 font-mono text-zinc-400">#/{p.numbered}</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={p.owned}
+                            disabled={pending}
+                            onChange={(e) => toggleParallel(p.id, e.target.checked)}
+                            className="h-4 w-4 shrink-0 accent-orange-500"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-xs">
+                            {p.name}
+                            {p.numbered ? (
+                              <span className="ml-1 font-mono text-zinc-400">#/{p.numbered}</span>
+                            ) : null}
+                          </span>
+                          {p.owned ? (
+                            <div className="flex shrink-0 items-center overflow-hidden rounded-md border border-zinc-300 dark:border-zinc-700">
+                              <button
+                                type="button"
+                                onClick={() => changeParallelQty(p.id, p.qty - 1)}
+                                disabled={pending || p.qty <= 0}
+                                aria-label={`Retirer un exemplaire de ${p.name}`}
+                                className="px-1.5 py-0.5 text-xs font-bold disabled:opacity-40"
+                              >
+                                −
+                              </button>
+                              <span className="w-5 text-center font-mono text-[11px] tabular-nums">
+                                {p.qty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => changeParallelQty(p.id, p.qty + 1)}
+                                disabled={pending}
+                                aria-label={`Ajouter un exemplaire de ${p.name}`}
+                                className="px-1.5 py-0.5 text-xs font-bold disabled:opacity-40"
+                              >
+                                +
+                              </button>
+                            </div>
                           ) : null}
-                        </span>
+                        </div>
+
+                        {/* Photo(s) + info propres a CET exemplaire — distinctes de la carte de base */}
                         {p.owned ? (
-                          <div className="flex shrink-0 items-center overflow-hidden rounded-md border border-zinc-300 dark:border-zinc-700">
-                            <button
-                              type="button"
-                              onClick={() => changeParallelQty(p.id, p.qty - 1)}
-                              disabled={pending || p.qty <= 0}
-                              aria-label={`Retirer un exemplaire de ${p.name}`}
-                              className="px-1.5 py-0.5 text-xs font-bold disabled:opacity-40"
-                            >
-                              −
-                            </button>
-                            <span className="w-5 text-center font-mono text-[11px] tabular-nums">
-                              {p.qty}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => changeParallelQty(p.id, p.qty + 1)}
-                              disabled={pending}
-                              aria-label={`Ajouter un exemplaire de ${p.name}`}
-                              className="px-1.5 py-0.5 text-xs font-bold disabled:opacity-40"
-                            >
-                              +
-                            </button>
+                          <div className="mt-1.5 flex items-center gap-2 pl-6">
+                            <div className="w-9 shrink-0">
+                              <CardVisual
+                                player={card.player}
+                                team={card.team}
+                                cardCode={card.card_code}
+                                rookie={card.rookie}
+                                photoUrl={p.photo_url}
+                                photoBackUrl={p.photo_back_url}
+                                size="thumb"
+                              />
+                            </div>
+                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                              <label className="cursor-pointer rounded border border-dashed border-zinc-300 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 hover:border-orange-400 dark:border-zinc-700 dark:text-zinc-300">
+                                {p.photo_url ? "Recto ✓" : "+ Recto"}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="sr-only"
+                                  disabled={pending}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) uploadParallelPhoto(p.id, file, "front");
+                                  }}
+                                />
+                              </label>
+                              {p.photo_url ? (
+                                <button
+                                  type="button"
+                                  onClick={() => removeParallelPhoto(p.id, "front")}
+                                  disabled={pending}
+                                  className="text-[10px] font-semibold text-red-600 hover:underline dark:text-red-400"
+                                >
+                                  ✕
+                                </button>
+                              ) : null}
+                              <label className="cursor-pointer rounded border border-dashed border-zinc-300 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 hover:border-orange-400 dark:border-zinc-700 dark:text-zinc-300">
+                                {p.photo_back_url ? "Verso ✓" : "+ Verso"}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="sr-only"
+                                  disabled={pending}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) uploadParallelPhoto(p.id, file, "back");
+                                  }}
+                                />
+                              </label>
+                              {p.photo_back_url ? (
+                                <button
+                                  type="button"
+                                  onClick={() => removeParallelPhoto(p.id, "back")}
+                                  disabled={pending}
+                                  className="text-[10px] font-semibold text-red-600 hover:underline dark:text-red-400"
+                                >
+                                  ✕
+                                </button>
+                              ) : null}
+                              <input
+                                value={p.note ?? ""}
+                                onChange={(e) => updateParallelNote(p.id, e.target.value)}
+                                onBlur={(e) => saveParallelNote(p.id, e.target.value)}
+                                placeholder="Nom / info de cet exemplaire (ex: PSA 9)"
+                                className="min-w-[9rem] flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-[10px] dark:border-zinc-700 dark:bg-zinc-950"
+                              />
+                            </div>
                           </div>
                         ) : null}
                       </li>

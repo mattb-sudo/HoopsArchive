@@ -65,6 +65,8 @@ export interface ParallelWithState extends ParallelRow {
   date_added: string | null;
   photo_path: string | null;
   photo_back_path: string | null;
+  /** Info libre propre a CET exemplaire (nom perso, cote, provenance...). */
+  note: string | null;
   /** URLs signees pretes a afficher (calculees en lot cote serveur). */
   photo_url?: string | null;
   photo_back_url?: string | null;

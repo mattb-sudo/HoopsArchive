@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "./supabase/server";
-import { getCurrentUser, PHOTO_BUCKET } from "./db";
+import { getCurrentUser, getSignedPhotoUrl, PHOTO_BUCKET } from "./db";
 import { encodeTeamSeason } from "./focus";
 import { normalizePrefs, type FocusType, type Theme, type ViewMode } from "./types";
 
@@ -315,6 +315,114 @@ export async function setParallelQtyAction(
     qty: safeQty,
     owned: safeQty > 0,
     date_added: safeQty > 0 ? (previous.date_added ?? new Date().toISOString()) : null,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  refreshCollectionViews(setId, cardCode);
+  return { ok: true };
+}
+
+/**
+ * Photo (recto ou verso) et note propres a un exemplaire de parallele : sans
+ * ca, une carte "normale" possedee et son parallele coche de la meme carte
+ * partageaient forcement la meme photo/note, alors que ce sont deux
+ * exemplaires physiques distincts.
+ */
+export interface ParallelPhotoResult extends ActionResult {
+  /** URL signee de la photo fraichement envoyee, pour mise a jour optimiste immediate. */
+  url?: string | null;
+}
+
+export async function uploadParallelPhotoAction(formData: FormData): Promise<ParallelPhotoResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const setId = String(formData.get("setId") ?? "");
+  const cardCode = String(formData.get("cardCode") ?? "");
+  const parallelId = String(formData.get("parallelId") ?? "");
+  const side = (String(formData.get("side") ?? "front") === "back" ? "back" : "front") as PhotoSide;
+  const file = formData.get("photo");
+
+  if (!setId || !cardCode || !parallelId) return { ok: false, error: "Parallèle inconnu." };
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Aucun fichier choisi." };
+  if (file.size > 10 * 1024 * 1024) return { ok: false, error: "Photo trop lourde (10 Mo max)." };
+
+  const supabase = createSupabaseServerClient();
+  const path = `${user.id}/${setId}/${cardCode}/${parallelId}${side === "back" ? "-verso" : ""}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(path, bytes, {
+    contentType: file.type || "image/jpeg",
+    upsert: true,
+  });
+  if (uploadError) return { ok: false, error: uploadError.message };
+
+  const previous = await readParallelState(setId, cardCode, parallelId);
+  const { error } = await supabase.from("user_parallel_state").upsert({
+    user_id: user.id,
+    set_id: setId,
+    card_code: cardCode,
+    parallel_id: parallelId,
+    owned: previous.owned,
+    qty: previous.qty,
+    date_added: previous.date_added,
+    [photoColumn(side)]: path,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  refreshCollectionViews(setId, cardCode);
+  const url = await getSignedPhotoUrl(path);
+  return { ok: true, url };
+}
+
+export async function removeParallelPhotoAction(
+  setId: string,
+  cardCode: string,
+  parallelId: string,
+  side: PhotoSide = "front",
+): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const supabase = createSupabaseServerClient();
+  const path = `${user.id}/${setId}/${cardCode}/${parallelId}${side === "back" ? "-verso" : ""}`;
+  await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+
+  const { error } = await supabase
+    .from("user_parallel_state")
+    .update({ [photoColumn(side)]: null })
+    .eq("set_id", setId)
+    .eq("card_code", cardCode)
+    .eq("parallel_id", parallelId);
+  if (error) return { ok: false, error: error.message };
+
+  refreshCollectionViews(setId, cardCode);
+  return { ok: true };
+}
+
+/** Nom/info libre propre a cet exemplaire de parallele (ex. "PSA 9", "échange en cours"). */
+export async function setParallelNoteAction(
+  setId: string,
+  cardCode: string,
+  parallelId: string,
+  note: string,
+): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const supabase = createSupabaseServerClient();
+  const previous = await readParallelState(setId, cardCode, parallelId);
+  const trimmed = note.trim();
+
+  const { error } = await supabase.from("user_parallel_state").upsert({
+    user_id: user.id,
+    set_id: setId,
+    card_code: cardCode,
+    parallel_id: parallelId,
+    owned: previous.owned,
+    qty: previous.qty,
+    date_added: previous.date_added,
+    note: trimmed.length === 0 ? null : trimmed,
   });
   if (error) return { ok: false, error: error.message };
 
