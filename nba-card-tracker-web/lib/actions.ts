@@ -389,12 +389,19 @@ export async function restoreCardStateAction(
 // Photo personnelle (bucket prive card-photos)
 // ---------------------------------------------------------------------------
 
+export type PhotoSide = "front" | "back";
+
+function photoColumn(side: PhotoSide): "photo_path" | "photo_back_path" {
+  return side === "back" ? "photo_back_path" : "photo_path";
+}
+
 export async function uploadCardPhotoAction(formData: FormData): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Session expirée." };
 
   const setId = String(formData.get("setId") ?? "");
   const cardCode = String(formData.get("cardCode") ?? "");
+  const side = (String(formData.get("side") ?? "front") === "back" ? "back" : "front") as PhotoSide;
   const file = formData.get("photo");
 
   if (!setId || !cardCode) return { ok: false, error: "Carte inconnue." };
@@ -402,7 +409,7 @@ export async function uploadCardPhotoAction(formData: FormData): Promise<ActionR
   if (file.size > 10 * 1024 * 1024) return { ok: false, error: "Photo trop lourde (10 Mo max)." };
 
   const supabase = createSupabaseServerClient();
-  const path = `${user.id}/${setId}/${cardCode}`;
+  const path = `${user.id}/${setId}/${cardCode}${side === "back" ? "-verso" : ""}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
 
   const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(path, bytes, {
@@ -419,7 +426,7 @@ export async function uploadCardPhotoAction(formData: FormData): Promise<ActionR
     owned: previous.owned,
     qty: previous.qty,
     date_added: previous.date_added,
-    photo_path: path,
+    [photoColumn(side)]: path,
   });
   if (error) return { ok: false, error: error.message };
 
@@ -430,17 +437,18 @@ export async function uploadCardPhotoAction(formData: FormData): Promise<ActionR
 export async function removeCardPhotoAction(
   setId: string,
   cardCode: string,
+  side: PhotoSide = "front",
 ): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Session expirée." };
 
   const supabase = createSupabaseServerClient();
-  const path = `${user.id}/${setId}/${cardCode}`;
+  const path = `${user.id}/${setId}/${cardCode}${side === "back" ? "-verso" : ""}`;
   await supabase.storage.from(PHOTO_BUCKET).remove([path]);
 
   const { error } = await supabase
     .from("user_card_state")
-    .update({ photo_path: null })
+    .update({ [photoColumn(side)]: null })
     .eq("set_id", setId)
     .eq("card_code", cardCode);
   if (error) return { ok: false, error: error.message };

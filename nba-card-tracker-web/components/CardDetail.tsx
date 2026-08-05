@@ -24,6 +24,8 @@ export interface CardDetailProps {
   setName: string;
   signers: CardPlayerRow[];
   photoUrl: string | null;
+  /** Photo du verso : si presente en plus de `photoUrl`, la carte se retourne au survol. */
+  photoBackUrl: string | null;
   /** Parallèles connus du set, avec l'etat de possession pour cette carte precise. */
   parallels: ParallelWithState[];
   prevCode: string | null;
@@ -42,6 +44,7 @@ export default function CardDetail({
   setName,
   signers,
   photoUrl,
+  photoBackUrl,
   parallels,
   prevCode,
   nextCode,
@@ -58,6 +61,7 @@ export default function CardDetail({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+  const fileBackRef = useRef<HTMLInputElement>(null);
   const activeThumbRef = useRef<HTMLAnchorElement>(null);
   const router = useRouter();
 
@@ -165,24 +169,26 @@ export default function CardDetail({
     });
   }
 
-  function uploadPhoto(file: File) {
+  function uploadPhoto(file: File, side: "front" | "back") {
     const formData = new FormData();
     formData.set("setId", card.set_id);
     formData.set("cardCode", card.card_code);
+    formData.set("side", side);
     formData.set("photo", file);
     startTransition(async () => {
       const res = await uploadCardPhotoAction(formData);
       if (!res.ok) setError(res.error ?? "Envoi impossible.");
-      else flash("Photo enregistrée.");
-      if (fileRef.current) fileRef.current.value = "";
+      else flash(side === "back" ? "Photo du verso enregistrée." : "Photo enregistrée.");
+      const ref = side === "back" ? fileBackRef : fileRef;
+      if (ref.current) ref.current.value = "";
     });
   }
 
-  function removePhoto() {
+  function removePhoto(side: "front" | "back") {
     startTransition(async () => {
-      const res = await removeCardPhotoAction(card.set_id, card.card_code);
+      const res = await removeCardPhotoAction(card.set_id, card.card_code, side);
       if (!res.ok) setError(res.error ?? "Suppression impossible.");
-      else flash("Photo supprimée.");
+      else flash(side === "back" ? "Photo du verso supprimée." : "Photo supprimée.");
     });
   }
 
@@ -255,43 +261,78 @@ export default function CardDetail({
             rookie={card.rookie}
             subsetLabel={subsetName}
             photoUrl={photoUrl}
+            photoBackUrl={photoBackUrl}
             size="hero"
             dimmed={!owned}
             gold={qty > 1}
           />
+          {photoUrl && photoBackUrl ? (
+            <p className="mt-1.5 text-center text-[10px] leading-snug text-zinc-400">
+              Survole la carte pour voir le verso.
+            </p>
+          ) : null}
 
-          <div className="mt-2 space-y-1.5">
-            <label
-              className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-center text-xs font-semibold text-zinc-600 hover:border-orange-400 dark:border-zinc-700 dark:text-zinc-300"
-            >
-              {photoUrl ? "Remplacer ma photo" : "Ajouter ma photo de la carte"}
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                disabled={pending}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) uploadPhoto(file);
-                }}
-              />
-            </label>
-            {photoUrl ? (
-              <button
-                type="button"
-                onClick={removePhoto}
-                disabled={pending}
-                className="w-full rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
-              >
-                Supprimer ma photo
-              </button>
-            ) : (
-              <p className="text-center text-[10px] leading-snug text-zinc-400">
-                Sans photo, le visuel est généré aux couleurs de l&apos;équipe.
-              </p>
-            )}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <label className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-center text-xs font-semibold text-zinc-600 hover:border-orange-400 dark:border-zinc-700 dark:text-zinc-300">
+                {photoUrl ? "Remplacer le recto" : "Ajouter le recto"}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={pending}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadPhoto(file, "front");
+                  }}
+                />
+              </label>
+              {photoUrl ? (
+                <button
+                  type="button"
+                  onClick={() => removePhoto("front")}
+                  disabled={pending}
+                  className="w-full rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                >
+                  Supprimer le recto
+                </button>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block cursor-pointer rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-center text-xs font-semibold text-zinc-600 hover:border-orange-400 dark:border-zinc-700 dark:text-zinc-300">
+                {photoBackUrl ? "Remplacer le verso" : "Ajouter le verso"}
+                <input
+                  ref={fileBackRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={pending}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadPhoto(file, "back");
+                  }}
+                />
+              </label>
+              {photoBackUrl ? (
+                <button
+                  type="button"
+                  onClick={() => removePhoto("back")}
+                  disabled={pending}
+                  className="w-full rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                >
+                  Supprimer le verso
+                </button>
+              ) : null}
+            </div>
           </div>
+          {!photoUrl && !photoBackUrl ? (
+            <p className="mt-1.5 text-center text-[10px] leading-snug text-zinc-400">
+              Sans photo, le visuel est généré aux couleurs de l&apos;équipe. Ajoute le recto et le
+              verso pour que la carte se retourne au survol.
+            </p>
+          ) : null}
         </div>
 
         {/* -------- Informations -------- */}

@@ -34,9 +34,10 @@ export default async function CartePage({ params }: PageProps) {
   if (index < 0) notFound();
 
   const card = view.cards[index];
-  const [signers, photoUrl, parallels] = await Promise.all([
+  const [signers, photoUrl, photoBackUrl, parallels] = await Promise.all([
     getCardPlayersForCard(setId, cardCode),
     getSignedPhotoUrl(card.photo_path),
+    getSignedPhotoUrl(card.photo_back_path),
     getParallelsForCard(setId, cardCode),
   ]);
 
@@ -48,6 +49,7 @@ export default async function CartePage({ params }: PageProps) {
       subsetName={subsetLabel(card.subset, view.subsets)}
       signers={signers}
       photoUrl={photoUrl}
+      photoBackUrl={photoBackUrl}
       parallels={parallels}
       prevCode={index > 0 ? view.cards[index - 1].card_code : null}
       nextCode={index < view.cards.length - 1 ? view.cards[index + 1].card_code : null}

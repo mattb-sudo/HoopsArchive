@@ -52,6 +52,8 @@ export interface UserParallelStateRow {
   qty: number;
   note: string | null;
   photo_path: string | null;
+  /** Photo du verso, optionnelle : si les deux photos existent, la carte se retourne au survol. */
+  photo_back_path: string | null;
   date_added: string | null;
   updated_at: string;
 }
@@ -61,6 +63,11 @@ export interface ParallelWithState extends ParallelRow {
   owned: boolean;
   qty: number;
   date_added: string | null;
+  photo_path: string | null;
+  photo_back_path: string | null;
+  /** URLs signees pretes a afficher (calculees en lot cote serveur). */
+  photo_url?: string | null;
+  photo_back_url?: string | null;
 }
 
 export interface CardPlayerRow {
@@ -82,6 +89,8 @@ export interface UserCardStateRow {
   qty: number;
   note: string | null;
   photo_path: string | null;
+  /** Photo du verso, optionnelle : si les deux photos existent, la carte se retourne au survol. */
+  photo_back_path: string | null;
   /** Saisie utilisateur : prioritaire sur cards.variant. */
   variant: string | null;
   /** Saisie utilisateur : prioritaire sur cards.jersey_number. */
@@ -119,7 +128,12 @@ export interface CardWithState extends CardRow {
   qty: number;
   note: string | null;
   photo_path: string | null;
+  /** Photo du verso, optionnelle : si les deux photos existent, la carte se retourne au survol. */
+  photo_back_path: string | null;
   date_added: string | null;
+  /** URLs signees pretes a afficher, calculees en lot cote serveur (voir `attachPhotoUrls`). */
+  photo_url?: string | null;
+  photo_back_url?: string | null;
   /**
    * Presente uniquement sur les entrees "virtuelles" generees pour un
    * parallele coche sur la fiche carte (voir `getOwnedParallelInstances`).

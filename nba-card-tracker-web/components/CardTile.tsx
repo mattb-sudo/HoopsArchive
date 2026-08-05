@@ -69,6 +69,8 @@ export default function CardTile({
             team={card.team}
             cardCode={card.card_code}
             rookie={card.rookie}
+            photoUrl={card.photo_url}
+            photoBackUrl={card.photo_back_url}
             size="thumb"
             dimmed={!card.owned}
             gold={card.qty > 1}
@@ -111,6 +113,8 @@ export default function CardTile({
           cardCode={card.card_code}
           rookie={card.rookie}
           subsetLabel={subsetLabel}
+          photoUrl={card.photo_url}
+          photoBackUrl={card.photo_back_url}
           size="tile"
           dimmed={!card.owned}
           gold={card.qty > 1}

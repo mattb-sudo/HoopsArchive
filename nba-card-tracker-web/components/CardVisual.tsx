@@ -9,8 +9,13 @@ export interface CardVisualProps {
   cardCode: string;
   rookie?: boolean;
   subsetLabel?: string | null;
-  /** URL signee d'une photo personnelle : remplace le visuel genere. */
+  /** URL signee d'une photo personnelle (recto) : remplace le visuel genere. */
   photoUrl?: string | null;
+  /**
+   * URL signee de la photo du verso. Si les deux photos sont presentes, la
+   * carte se retourne au survol pour reveler le verso (effet CSS pur).
+   */
+  photoBackUrl?: string | null;
   size?: CardVisualSize;
   /** Carte manquante : rendu desature. */
   dimmed?: boolean;
@@ -37,6 +42,7 @@ export default function CardVisual({
   rookie = false,
   subsetLabel = null,
   photoUrl = null,
+  photoBackUrl = null,
   size = "tile",
   dimmed = false,
   gold = false,
@@ -45,20 +51,17 @@ export default function CardVisual({
   const s = SIZE_STYLES[size];
   const [, secondary] = teamColors(team);
   const textColor = readableTextColor(team);
+  const canFlip = Boolean(photoUrl && photoBackUrl);
 
   const shadowClass = gold
     ? "shadow-[0_0_0_1.5px_rgba(255,255,255,.65),0_0_0_3.5px_rgba(251,191,36,.95),0_6px_16px_-2px_rgba(251,191,36,.45)]"
     : "shadow-card";
 
-  return (
+  const front = (
     <div
       className={[
-        "relative w-full overflow-hidden rounded-lg select-none",
-        "aspect-[5/7]",
-        "transition-shadow duration-150 group-hover:shadow-card-hover",
-        dimmed ? "grayscale-[0.85] opacity-60" : "",
-        shadowClass,
-        className,
+        "absolute inset-0 overflow-hidden rounded-lg",
+        canFlip ? "[backface-visibility:hidden]" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -141,6 +144,42 @@ export default function CardVisual({
           ) : null}
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div
+      className={[
+        "relative w-full select-none rounded-lg",
+        "aspect-[5/7]",
+        canFlip ? "" : "overflow-hidden",
+        "transition-shadow duration-150 group-hover:shadow-card-hover",
+        dimmed ? "grayscale-[0.85] opacity-60" : "",
+        shadowClass,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={canFlip ? { perspective: "1200px" } : undefined}
+    >
+      {canFlip ? (
+        <div className="absolute inset-0 [transform-style:preserve-3d] transition-transform duration-500 ease-out hover:[transform:rotateY(180deg)]">
+          {front}
+          <div
+            className="absolute inset-0 overflow-hidden rounded-lg [backface-visibility:hidden] [transform:rotateY(180deg)]"
+            style={{ background: teamGradient(team), color: textColor }}
+          >
+            <img
+              src={photoBackUrl ?? undefined}
+              alt={`Verso de la carte ${cardCode}${player ? ` — ${player}` : ""}`}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div aria-hidden className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/20" />
+          </div>
+        </div>
+      ) : (
+        front
+      )}
     </div>
   );
 }
