@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CardGrid from "@/components/CardGrid";
+import PageHeading from "@/components/PageHeading";
 import ProgressBar from "@/components/ProgressBar";
 import SetupNotice from "@/components/SetupNotice";
 import { progressOf } from "@/lib/cards";
@@ -41,15 +42,9 @@ export default async function FocusPage({ params }: { params: { id: string } }) 
         </Link>
       </div>
 
-      <header>
-        <h1 className="font-display text-2xl font-bold uppercase tracking-tight">{focus.label}</h1>
-        <ProgressBar
-          owned={progress.owned}
-          total={progress.total}
-          pct={progress.pct}
-          size="lg"
-          className="mt-3"
-        />
+      <header className="space-y-3">
+        <PageHeading title={focus.label} />
+        <ProgressBar owned={progress.owned} total={progress.total} pct={progress.pct} size="lg" />
       </header>
 
       <CardGrid

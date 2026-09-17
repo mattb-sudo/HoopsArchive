@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import CardVisual from "@/components/CardVisual";
 import FannedCards from "@/components/FannedCards";
+import PageHeading from "@/components/PageHeading";
 import ProgressBar from "@/components/ProgressBar";
+import StatLine from "@/components/StatLine";
 import SetCover from "@/components/SetCover";
 import SetupNotice from "@/components/SetupNotice";
 import { setCoverImage } from "@/lib/setCovers";
@@ -83,16 +85,9 @@ export default async function AccueilPage() {
     <div className="space-y-8">
       {/* -------- Titre + stats -------- */}
       <section>
-        <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Ma collection</h1>
-        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-4">
-          {stats.map((stat) => (
-            <div key={stat.label}>
-              <p className="font-mono text-2xl font-black tabular-nums">{stat.value}</p>
-              <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                {stat.label}
-              </p>
-            </div>
-          ))}
+        <PageHeading eyebrow="Carnet de collection" title="Ma collection" />
+        <div className="mt-4">
+          <StatLine items={stats} />
         </div>
       </section>
 

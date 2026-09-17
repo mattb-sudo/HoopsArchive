@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BarList from "@/components/BarList";
 import CardVisual from "@/components/CardVisual";
+import PageHeading from "@/components/PageHeading";
 import SetupNotice from "@/components/SetupNotice";
+import StatLine from "@/components/StatLine";
 import {
   formatEUR,
   pricedOwnedCount,
@@ -38,43 +40,34 @@ export default async function ArgentPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Argent</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        <PageHeading eyebrow="La cote" title="Argent" />
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
           Basé sur les prix que vous renseignez vous-même, carte par carte (fiche carte ou fiche
           d&apos;un exemplaire parallèle). Aucune cote de marché automatique pour l&apos;instant.
         </p>
 
-        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-4">
-          <div>
-            <p className="font-mono text-2xl font-black tabular-nums">{formatEUR(value)}</p>
-            <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              valeur totale estimée
-            </p>
-          </div>
-          <div>
-            <p className="font-mono text-2xl font-black tabular-nums">{formatEUR(avg)}</p>
-            <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              valeur moyenne / carte valorisée
-            </p>
-          </div>
-          <div>
-            <p className="font-mono text-2xl font-black tabular-nums">
-              {priced}
-              <span className="text-base font-medium text-zinc-400">/{global.owned}</span>
-            </p>
-            <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              cartes valorisées ({pctPriced}%)
-            </p>
-          </div>
-          <div>
-            <p className="truncate font-mono text-2xl font-black tabular-nums">
-              {mostValuable ? formatEUR((mostValuable.price ?? 0) * Math.max(mostValuable.qty, 1)) : "—"}
-            </p>
-            <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              carte la plus chère
-              {mostValuable ? ` · ${mostValuable.player ?? "—"}` : ""}
-            </p>
-          </div>
+        <div className="mt-4">
+          <StatLine
+            items={[
+              { label: "valeur totale estimée", value: formatEUR(value) },
+              { label: "valeur moyenne / carte valorisée", value: formatEUR(avg) },
+              {
+                label: `cartes valorisées (${pctPriced}%)`,
+                value: (
+                  <>
+                    {priced}
+                    <span className="text-lg text-zinc-400">/{global.owned}</span>
+                  </>
+                ),
+              },
+              {
+                label: mostValuable ? `carte la plus chère · ${mostValuable.player ?? "—"}` : "carte la plus chère",
+                value: mostValuable
+                  ? formatEUR((mostValuable.price ?? 0) * Math.max(mostValuable.qty, 1))
+                  : "—",
+              },
+            ]}
+          />
         </div>
       </section>
 

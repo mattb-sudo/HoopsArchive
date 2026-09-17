@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CardGrid from "@/components/CardGrid";
+import PageHeading from "@/components/PageHeading";
 import ProgressBar from "@/components/ProgressBar";
 import SetCover from "@/components/SetCover";
 import SetupNotice from "@/components/SetupNotice";
@@ -9,7 +10,6 @@ import { setCoverImage } from "@/lib/setCovers";
 import { duplicateCount, progressOf } from "@/lib/cards";
 import { getProfile, getSetView, requireUser } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { NOISE_TEXTURE } from "@/lib/textures";
 import { parseStatusFilter } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Classeur" };
@@ -42,35 +42,25 @@ export default async function ClasseurPage({ params, searchParams }: PageProps) 
         </Link>
       </div>
 
-      <header className="relative flex items-center gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 p-4 text-white shadow-[0_20px_45px_-20px_rgba(0,0,0,0.45)]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
-          style={{ backgroundImage: NOISE_TEXTURE }}
+      <header className="space-y-3">
+        <PageHeading
+          eyebrow={
+            <>
+              {set.manufacturer ?? "Set"} · {duplicateCount(cards)} doublon
+              {duplicateCount(cards) > 1 ? "s" : ""}
+            </>
+          }
+          title={set.name}
+          aside={
+            <SetCover
+              setId={set.id}
+              name={set.name}
+              imageSrc={setCoverImage(set.id)}
+              className="w-14 text-base ring-1 ring-black/5 dark:ring-white/10"
+            />
+          }
         />
-        <SetCover
-          setId={set.id}
-          name={set.name}
-          imageSrc={setCoverImage(set.id)}
-          className="relative w-16 shrink-0 text-lg ring-1 ring-white/15"
-        />
-        <div className="relative min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-orange-400">
-            {set.manufacturer ?? "Set"} · {duplicateCount(cards)} doublon
-            {duplicateCount(cards) > 1 ? "s" : ""}
-          </p>
-          <h1 className="truncate font-display text-2xl font-bold uppercase tracking-tight">
-            {set.name}
-          </h1>
-          <ProgressBar
-            owned={progress.owned}
-            total={progress.total}
-            pct={progress.pct}
-            size="lg"
-            inverted
-            className="mt-2"
-          />
-        </div>
+        <ProgressBar owned={progress.owned} total={progress.total} pct={progress.pct} size="lg" />
       </header>
 
       <CardGrid

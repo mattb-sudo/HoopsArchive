@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AddSession, { type AddCandidate } from "@/components/AddSession";
+import PageHeading from "@/components/PageHeading";
 import SetupNotice from "@/components/SetupNotice";
 import { subsetLabel } from "@/lib/cards";
 import { getCollectionSnapshot, requireUser } from "@/lib/db";
@@ -29,7 +30,7 @@ export default async function AjouterPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Ajouter une carte</h1>
+      <PageHeading eyebrow="Nouvelle pioche" title="Ajouter une carte" />
 
       <AddSession candidates={candidates} />
     </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import CardVisual from "@/components/CardVisual";
 import FocusManager from "@/components/FocusManager";
+import PageHeading from "@/components/PageHeading";
 import ProgressBar from "@/components/ProgressBar";
 import SetupNotice from "@/components/SetupNotice";
 import { subsetLabel } from "@/lib/cards";
@@ -85,7 +86,7 @@ export default async function FocusLibraryPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Mes focus</h1>
+      <PageHeading eyebrow="Mes chasses" title="Mes focus" />
 
       <FocusManager focuses={focuses} options={options} focusProgress={focusProgress} />
 

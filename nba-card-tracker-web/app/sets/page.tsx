@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PageHeading from "@/components/PageHeading";
 import ProgressBar from "@/components/ProgressBar";
 import SetCover from "@/components/SetCover";
 import SetupNotice from "@/components/SetupNotice";
@@ -25,7 +26,7 @@ export default async function SetsPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Tous mes sets</h1>
+      <PageHeading eyebrow="La bibliotheque" title="Tous mes sets" />
 
       <ul className="space-y-3">
         {progress.map(({ set, owned, total, pct }) => (
