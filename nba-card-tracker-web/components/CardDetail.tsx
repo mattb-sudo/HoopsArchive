@@ -15,6 +15,7 @@ import {
   uploadCardPhotoAction,
 } from "@/lib/actions";
 import { formatDateFr } from "@/lib/cards";
+import { compressImageFile } from "@/lib/imageCompress";
 import type { CardPlayerRow, CardWithState, ParallelWithState } from "@/lib/types";
 
 export interface CardDetailProps {
@@ -186,12 +187,13 @@ export default function CardDetail({
     });
   }
 
-  function uploadPhoto(file: File, side: "front" | "back") {
+  async function uploadPhoto(file: File, side: "front" | "back") {
+    const compressed = await compressImageFile(file);
     const formData = new FormData();
     formData.set("setId", card.set_id);
     formData.set("cardCode", card.card_code);
     formData.set("side", side);
-    formData.set("photo", file);
+    formData.set("photo", compressed);
     startTransition(async () => {
       const res = await uploadCardPhotoAction(formData);
       if (!res.ok) setError(res.error ?? "Envoi impossible.");

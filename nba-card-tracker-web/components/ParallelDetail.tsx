@@ -12,6 +12,7 @@ import {
   uploadParallelPhotoAction,
 } from "@/lib/actions";
 import { formatDateFr } from "@/lib/cards";
+import { compressImageFile } from "@/lib/imageCompress";
 import type { CardWithState, ParallelWithState } from "@/lib/types";
 
 export interface ParallelDetailProps {
@@ -75,13 +76,14 @@ export default function ParallelDetail({ card, parallel, setName, subsetName }: 
     });
   }
 
-  function uploadPhoto(file: File, side: "front" | "back") {
+  async function uploadPhoto(file: File, side: "front" | "back") {
+    const compressed = await compressImageFile(file);
     const formData = new FormData();
     formData.set("setId", card.set_id);
     formData.set("cardCode", card.card_code);
     formData.set("parallelId", parallel.id);
     formData.set("side", side);
-    formData.set("photo", file);
+    formData.set("photo", compressed);
     startTransition(async () => {
       const res = await uploadParallelPhotoAction(formData);
       if (!res.ok) {

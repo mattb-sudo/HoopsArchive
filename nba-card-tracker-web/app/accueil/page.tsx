@@ -11,7 +11,6 @@ import { setCoverImage } from "@/lib/setCovers";
 import {
   duplicateCount,
   formatEUR,
-  formatShortDateFr,
   progressOf,
   rarestOwnedCard,
   subsetLabel,
@@ -50,7 +49,6 @@ export default async function AccueilPage() {
   const rarest = rarestOwnedCard(cards, subsets);
   const value = totalValue(cards);
   const completedSets = setProgress.filter((s) => s.total > 0 && s.pct === 100).length;
-  const lastAddedDate = lastAdded[0]?.date_added ?? null;
 
   const stats: { label: string; value: React.ReactNode }[] = [
     {
@@ -78,7 +76,6 @@ export default async function AccueilPage() {
         "—"
       ),
     },
-    { label: "dernier ajout", value: lastAddedDate ? formatShortDateFr(lastAddedDate) : "—" },
   ];
 
   return (

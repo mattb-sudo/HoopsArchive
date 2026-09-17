@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { readableTextColor, teamColors, teamGradient } from "@/lib/teamColors";
 import { NOISE_TEXTURE } from "@/lib/textures";
 
@@ -41,6 +42,14 @@ const SIZE_STYLES: Record<CardVisualSize, { name: string; code: string; badge: s
     hero: { name: "text-xl sm:text-2xl leading-tight", code: "text-xs", badge: "text-xs px-2 py-0.5", pad: "p-4" },
   };
 
+// Largeur reelle affichee par taille, pour que next/image ne telecharge que
+// ce dont on a besoin (essentiel : des dizaines de vignettes par page).
+const IMAGE_SIZES: Record<CardVisualSize, string> = {
+  thumb: "56px",
+  tile: "(min-width: 640px) 180px, 30vw",
+  hero: "(min-width: 640px) 320px, 90vw",
+};
+
 /**
  * Visuel de carte 100 % genere (aucune image tierce).
  * Degrade aux couleurs de la franchise + nom du joueur + numero + badge RC.
@@ -80,10 +89,12 @@ export default function CardVisual({
     >
       {photoUrl ? (
         <>
-          <img
+          <Image
             src={photoUrl}
             alt={`Photo de la carte ${cardCode}${player ? ` — ${player}` : ""}`}
-            className="absolute inset-0 h-full w-full object-cover"
+            fill
+            sizes={IMAGE_SIZES[size]}
+            className="object-cover"
           />
           <div aria-hidden className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/20" />
         </>
@@ -188,11 +199,15 @@ export default function CardVisual({
             className="absolute inset-0 overflow-hidden rounded-lg [backface-visibility:hidden] [transform:rotateY(180deg)]"
             style={{ background: teamGradient(team), color: textColor }}
           >
-            <img
-              src={photoBackUrl ?? undefined}
-              alt={`Verso de la carte ${cardCode}${player ? ` — ${player}` : ""}`}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
+            {photoBackUrl ? (
+              <Image
+                src={photoBackUrl}
+                alt={`Verso de la carte ${cardCode}${player ? ` — ${player}` : ""}`}
+                fill
+                sizes={IMAGE_SIZES[size]}
+                className="object-cover"
+              />
+            ) : null}
             <div aria-hidden className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/20" />
           </div>
         </div>
