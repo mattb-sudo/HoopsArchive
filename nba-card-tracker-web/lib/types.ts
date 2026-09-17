@@ -54,6 +54,8 @@ export interface UserParallelStateRow {
   photo_path: string | null;
   /** Photo du verso, optionnelle : si les deux photos existent, la carte se retourne au survol. */
   photo_back_path: string | null;
+  /** Prix/valeur saisi librement par l'utilisateur, en euros, propre a CET exemplaire. */
+  price: number | null;
   date_added: string | null;
   updated_at: string;
 }
@@ -67,6 +69,8 @@ export interface ParallelWithState extends ParallelRow {
   photo_back_path: string | null;
   /** Info libre propre a CET exemplaire (nom perso, cote, provenance...). */
   note: string | null;
+  /** Prix/valeur saisi librement par l'utilisateur, en euros, propre a CET exemplaire. */
+  price: number | null;
   /** URLs signees pretes a afficher (calculees en lot cote serveur). */
   photo_url?: string | null;
   photo_back_url?: string | null;
@@ -93,6 +97,8 @@ export interface UserCardStateRow {
   photo_path: string | null;
   /** Photo du verso, optionnelle : si les deux photos existent, la carte se retourne au survol. */
   photo_back_path: string | null;
+  /** Prix/valeur saisi librement par l'utilisateur, en euros. */
+  price: number | null;
   /** Saisie utilisateur : prioritaire sur cards.variant. */
   variant: string | null;
   /** Saisie utilisateur : prioritaire sur cards.jersey_number. */
@@ -114,6 +120,8 @@ export interface FocusRow {
 export interface Prefs {
   defaultView: ViewMode;
   theme: Theme;
+  /** Les blocs de cartes (par sous-ensemble/set) demarrent replies si true. */
+  collapseSectionsByDefault: boolean;
 }
 
 export interface ProfileRow {
@@ -132,6 +140,8 @@ export interface CardWithState extends CardRow {
   photo_path: string | null;
   /** Photo du verso, optionnelle : si les deux photos existent, la carte se retourne au survol. */
   photo_back_path: string | null;
+  /** Prix/valeur saisi librement par l'utilisateur, en euros. */
+  price: number | null;
   date_added: string | null;
   /** URLs signees pretes a afficher, calculees en lot cote serveur (voir `attachPhotoUrls`). */
   photo_url?: string | null;
@@ -169,12 +179,17 @@ export function parseStatusFilter(value: string | undefined | null): StatusFilte
   return STATUS_FILTERS.includes(value as StatusFilter) ? (value as StatusFilter) : "all";
 }
 
-export const DEFAULT_PREFS: Prefs = { defaultView: "grid", theme: "light" };
+export const DEFAULT_PREFS: Prefs = {
+  defaultView: "grid",
+  theme: "light",
+  collapseSectionsByDefault: true,
+};
 
 export function normalizePrefs(value: unknown): Prefs {
   const raw = (value ?? {}) as Partial<Prefs>;
   return {
     defaultView: raw.defaultView === "list" ? "list" : "grid",
     theme: raw.theme === "dark" ? "dark" : "light",
+    collapseSectionsByDefault: raw.collapseSectionsByDefault !== false,
   };
 }

@@ -11,11 +11,14 @@ export default function BarList({
   showPercent = false,
   total,
   emptyLabel = "Aucune donnée.",
+  format,
 }: {
   items: BarItem[];
   showPercent?: boolean;
   total?: number;
   emptyLabel?: string;
+  /** Formatage personnalise de la valeur affichee (ex. euros) — defaut : nombre brut. */
+  format?: (value: number) => string;
 }) {
   if (items.length === 0) {
     return <p className="text-sm text-zinc-500 dark:text-zinc-400">{emptyLabel}</p>;
@@ -33,7 +36,7 @@ export default function BarList({
             <div className="mb-0.5 flex items-baseline justify-between gap-2">
               <span className="truncate text-zinc-700 dark:text-zinc-200">{item.label}</span>
               <span className="whitespace-nowrap font-mono tabular-nums text-zinc-500 dark:text-zinc-400">
-                {item.value}
+                {format ? format(item.value) : item.value}
                 {showPercent ? ` · ${pct}%` : ""}
               </span>
             </div>

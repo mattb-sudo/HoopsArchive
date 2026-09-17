@@ -79,6 +79,7 @@ export default async function ClasseurPage({ params, searchParams }: PageProps) 
         groupBy="subset"
         initialStatus={parseStatusFilter(searchParams?.filter)}
         initialView={profile.prefs.defaultView}
+        collapseByDefault={profile.prefs.collapseSectionsByDefault}
       />
     </div>
   );

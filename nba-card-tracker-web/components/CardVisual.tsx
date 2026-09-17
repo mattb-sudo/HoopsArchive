@@ -16,12 +16,22 @@ export interface CardVisualProps {
    * carte se retourne au survol pour reveler le verso (effet CSS pur).
    */
   photoBackUrl?: string | null;
+  /** Prix/valeur saisi par l'utilisateur : petit badge en haut a gauche (tile/hero uniquement). */
+  price?: number | null;
   size?: CardVisualSize;
   /** Carte manquante : rendu desature. */
   dimmed?: boolean;
   /** qty > 1 : liseré doré. */
   gold?: boolean;
   className?: string;
+}
+
+function formatBadgePrice(value: number): string {
+  return value.toLocaleString("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: value < 100 ? 2 : 0,
+  });
 }
 
 const SIZE_STYLES: Record<CardVisualSize, { name: string; code: string; badge: string; pad: string }> =
@@ -43,6 +53,7 @@ export default function CardVisual({
   subsetLabel = null,
   photoUrl = null,
   photoBackUrl = null,
+  price = null,
   size = "tile",
   dimmed = false,
   gold = false,
@@ -162,6 +173,14 @@ export default function CardVisual({
         .join(" ")}
       style={canFlip ? { perspective: "1200px" } : undefined}
     >
+      {price != null && size !== "thumb" ? (
+        <span
+          className="pointer-events-none absolute left-1 top-1 z-10 rounded bg-emerald-600/95 px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm"
+          title={`Prix renseigné : ${formatBadgePrice(price)}`}
+        >
+          {formatBadgePrice(price)}
+        </span>
+      ) : null}
       {canFlip ? (
         <div className="absolute inset-0 [transform-style:preserve-3d] transition-transform duration-500 ease-out hover:[transform:rotateY(180deg)]">
           {front}

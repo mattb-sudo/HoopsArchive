@@ -17,6 +17,22 @@ export const AVATARS: AvatarOption[] = [
   { seed: "diamond", emoji: "💎", label: "Diamant" },
   { seed: "cards", emoji: "🃏", label: "Cartes" },
   { seed: "trophy", emoji: "🏆", label: "Trophée" },
+  { seed: "goat", emoji: "🐐", label: "GOAT" },
+  { seed: "crown", emoji: "👑", label: "Couronne" },
+  { seed: "lightning", emoji: "⚡", label: "Éclair" },
+  { seed: "target", emoji: "🎯", label: "Cible" },
+  { seed: "shark", emoji: "🦈", label: "Requin" },
+  { seed: "lion", emoji: "🦁", label: "Lion" },
+  { seed: "eagle", emoji: "🦅", label: "Aigle" },
+  { seed: "wolf", emoji: "🐺", label: "Loup" },
+  { seed: "gem", emoji: "🔷", label: "Gemme" },
+  { seed: "money", emoji: "💰", label: "Sac d'argent" },
+  { seed: "gift", emoji: "🎁", label: "Cadeau" },
+  { seed: "camera", emoji: "📸", label: "Appareil photo" },
+  { seed: "comet", emoji: "☄️", label: "Comète" },
+  { seed: "magnet", emoji: "🧲", label: "Aimant" },
+  { seed: "clover", emoji: "🍀", label: "Trèfle" },
+  { seed: "joker", emoji: "🤡", label: "Joker" },
 ];
 
 const FALLBACK = AVATARS[0];

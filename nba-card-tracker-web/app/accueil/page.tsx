@@ -6,26 +6,22 @@ import ProgressBar from "@/components/ProgressBar";
 import SetCover from "@/components/SetCover";
 import SetupNotice from "@/components/SetupNotice";
 import { setCoverImage } from "@/lib/setCovers";
-import { duplicateCopies, duplicateCount, progressOf, subsetLabel } from "@/lib/cards";
 import {
-  focusProgressList,
-  getCollectionSnapshot,
-  requireUser,
-  setProgressList,
-} from "@/lib/db";
+  duplicateCount,
+  formatEUR,
+  formatShortDateFr,
+  progressOf,
+  rarestOwnedCard,
+  subsetLabel,
+  totalValue,
+} from "@/lib/cards";
+import { focusProgressList, getCollectionSnapshot, requireUser, setProgressList } from "@/lib/db";
 import { dailyPick } from "@/lib/rng";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { NOISE_TEXTURE } from "@/lib/textures";
 import type { CardWithState } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Accueil" };
 export const dynamic = "force-dynamic";
-
-const QUICK_LINKS = [
-  { href: "/recherche", label: "Recherche", hint: "Trouver une carte" },
-  { href: "/ajouter", label: "Ajouter", hint: "Session d'ajout rapide" },
-  { href: "/stats", label: "Statistiques", hint: "Suivre l'évolution" },
-];
 
 export default async function AccueilPage() {
   if (!isSupabaseConfigured()) return <SetupNotice />;
@@ -49,38 +45,54 @@ export default async function AccueilPage() {
   );
 
   const dupCards = duplicateCount(cards);
-  const dupCopies = duplicateCopies(cards);
-  const dupSetId =
-    setProgress
-      .map((s) => ({ id: s.set.id, n: duplicateCount(cards.filter((c) => c.set_id === s.set.id)) }))
-      .sort((a, b) => b.n - a.n)[0]?.id ?? sets[0]?.id;
+  const rarest = rarestOwnedCard(cards, subsets);
+  const value = totalValue(cards);
+  const completedSets = setProgress.filter((s) => s.total > 0 && s.pct === 100).length;
+  const lastAddedDate = lastAdded[0]?.date_added ?? null;
+
+  const stats: { label: string; value: React.ReactNode }[] = [
+    {
+      label: `complétion (${global.pct}%)`,
+      value: (
+        <>
+          {global.owned}
+          <span className="text-base font-medium text-zinc-400">/{global.total}</span>
+        </>
+      ),
+    },
+    { label: `doublon${dupCards > 1 ? "s" : ""}`, value: dupCards },
+    { label: `set${completedSets > 1 ? "s" : ""} complété${completedSets > 1 ? "s" : ""}`, value: completedSets },
+    { label: "valeur totale estimée", value: formatEUR(value) },
+    {
+      label: "carte la plus rare",
+      value: rarest ? (
+        <Link
+          href={`/carte/${encodeURIComponent(rarest.set_id)}/${encodeURIComponent(rarest.card_code)}`}
+          className="hover:underline"
+        >
+          {rarest.player ?? "—"}
+        </Link>
+      ) : (
+        "—"
+      ),
+    },
+    { label: "dernier ajout", value: lastAddedDate ? formatShortDateFr(lastAddedDate) : "—" },
+  ];
 
   return (
     <div className="space-y-8">
-      {/* -------- Banniere globale -------- */}
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 p-5 text-white shadow-[0_20px_45px_-20px_rgba(0,0,0,0.45)]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
-          style={{ backgroundImage: NOISE_TEXTURE }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/25 blur-3xl"
-        />
-        <p className="relative text-xs font-semibold uppercase tracking-widest text-orange-400">
-          Ma collection
-        </p>
-        <p className="relative mt-1 font-display text-4xl font-bold tabular-nums tracking-tight">
-          {global.owned}
-          <span className="text-2xl font-medium text-white/50">/{global.total}</span>
-        </p>
-        <p className="relative text-sm text-white/70">{global.pct}% de la checklist</p>
-        <div className="relative mt-3 h-3 w-full overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-orange-500 transition-all duration-700"
-            style={{ width: `${global.pct}%` }}
-          />
+      {/* -------- Titre + stats -------- */}
+      <section>
+        <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Ma collection</h1>
+        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-4">
+          {stats.map((stat) => (
+            <div key={stat.label}>
+              <p className="font-mono text-2xl font-black tabular-nums">{stat.value}</p>
+              <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {stat.label}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -141,8 +153,8 @@ export default async function AccueilPage() {
         {activeFocuses.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
             Aucun focus actif. Ajoutez un joueur ou une équipe à suivre depuis votre{" "}
-            <Link href="/profil" className="font-semibold text-orange-600 underline dark:text-orange-400">
-              profil
+            <Link href="/focus" className="font-semibold text-orange-600 underline dark:text-orange-400">
+              page focus
             </Link>
             .
           </p>
@@ -197,40 +209,6 @@ export default async function AccueilPage() {
             })}
           </div>
         )}
-      </section>
-
-      {/* -------- Doublons + acces rapides -------- */}
-      <section className="grid gap-3 sm:grid-cols-2">
-        {dupSetId ? (
-          <Link
-            href={`/classeur/${encodeURIComponent(dupSetId)}?filter=duplicates`}
-            className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 transition hover:border-amber-500 dark:border-amber-700 dark:bg-amber-950/40"
-          >
-            <span className="text-2xl">🔁</span>
-            <div>
-              <p className="font-mono text-2xl font-black tabular-nums text-amber-800 dark:text-amber-200">
-                {dupCards}
-              </p>
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-                carte{dupCards > 1 ? "s" : ""} en doublon · {dupCopies} exemplaire
-                {dupCopies > 1 ? "s" : ""} disponible{dupCopies > 1 ? "s" : ""}
-              </p>
-            </div>
-          </Link>
-        ) : null}
-
-        <div className="grid grid-cols-3 gap-2">
-          {QUICK_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="flex flex-col justify-center rounded-xl border border-zinc-200 bg-white p-3 text-center transition hover:border-orange-400 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <span className="text-sm font-semibold">{link.label}</span>
-              <span className="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">{link.hint}</span>
-            </Link>
-          ))}
-        </div>
       </section>
     </div>
   );

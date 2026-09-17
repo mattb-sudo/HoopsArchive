@@ -23,6 +23,8 @@ export interface CardGridProps {
   groupBy?: "subset" | "set" | "none";
   initialStatus?: StatusFilter;
   initialView?: ViewMode;
+  /** Etat initial (replie/deplie) de chaque section — piloté par la préférence du profil. */
+  collapseByDefault?: boolean;
   /** Affiche le selecteur de sous-ensemble (inutile hors classeur). */
   showSubsetFilter?: boolean;
   showFilters?: boolean;
@@ -44,10 +46,31 @@ interface Section {
   cards: CardWithState[];
 }
 
+/** Chevron simple, sans emoji, pour l'ouverture/fermeture des blocs. */
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
+    >
+      <path
+        d="M6 9l6 6 6-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /**
  * Grille (ou liste) de cartes avec barre de filtres, tri et bascule
  * "possedee" immediate. La bascule est optimiste : l'interface reagit tout de
- * suite, la server action confirme ou annule.
+ * suite, la server action confirme ou annule. Les sections (par sous-ensemble
+ * ou par set) sont repliables individuellement.
  */
 export default function CardGrid({
   cards,
@@ -55,6 +78,7 @@ export default function CardGrid({
   groupBy = "subset",
   initialStatus = "all",
   initialView = "grid",
+  collapseByDefault = true,
   showSubsetFilter = true,
   showFilters = true,
   showSetName = false,
@@ -71,6 +95,8 @@ export default function CardGrid({
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortMode>("number");
   const [view, setView] = useState<ViewMode>(initialView);
+  // Exceptions individuelles a `collapseByDefault` (section ouverte/fermee au clic).
+  const [sectionOverrides, setSectionOverrides] = useState<Record<string, boolean>>({});
 
   // Une carte normale et son parallele coche partagent le meme card_code :
   // la cle doit distinguer les deux pour les overrides optimistes / etats en
@@ -152,25 +178,32 @@ export default function CardGrid({
     });
   }
 
+  function toggleSection(key: string) {
+    setSectionOverrides((prev) => ({
+      ...prev,
+      [key]: !(key in prev ? prev[key] : !collapseByDefault),
+    }));
+  }
+
   const total = progressOf(effective);
 
   return (
     <div>
       {showFilters ? (
         <div className="mb-4 space-y-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="sr-only" htmlFor="grid-search">
-              Filtrer les cartes
-            </label>
-            <input
-              id="grid-search"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filtrer (joueur, équipe, numéro…)"
-              className="min-w-[10rem] flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-orange-500 dark:border-zinc-700 dark:bg-zinc-950"
-            />
+          <label className="sr-only" htmlFor="grid-search">
+            Filtrer les cartes
+          </label>
+          <input
+            id="grid-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filtrer (joueur, équipe, numéro…)"
+            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-orange-500 dark:border-zinc-700 dark:bg-zinc-950"
+          />
 
+          <div className="flex flex-wrap items-center gap-2">
             <label className="sr-only" htmlFor="grid-sort">
               Trier par
             </label>
@@ -204,6 +237,10 @@ export default function CardGrid({
                 </button>
               ))}
             </div>
+
+            <span className="ml-auto font-mono text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+              {filtered.length} carte{filtered.length > 1 ? "s" : ""}
+            </span>
           </div>
 
           {showSubsetFilter && orderedSubsets.length > 0 ? (
@@ -268,11 +305,6 @@ export default function CardGrid({
               />
               Rookies uniquement
             </label>
-
-            <span className="ml-auto font-mono text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
-              {filtered.length} carte{filtered.length > 1 ? "s" : ""} · {total.owned}/{total.total}{" "}
-              possédées
-            </span>
           </div>
         </div>
       ) : null}
@@ -288,47 +320,66 @@ export default function CardGrid({
           {emptyLabel}
         </p>
       ) : (
-        <div className="space-y-7">
+        <div className="space-y-4">
           {sections.map((section) => {
             const sectionProgress = progressOf(section.cards);
+            const open = section.key in sectionOverrides
+              ? sectionOverrides[section.key]
+              : !collapseByDefault;
             return (
               <section key={section.key}>
                 {section.title ? (
-                  <div className="mb-2">
-                    <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-700 dark:text-zinc-200">
-                      {section.title}
-                    </h2>
-                    <ProgressBar
-                      owned={sectionProgress.owned}
-                      total={sectionProgress.total}
-                      pct={sectionProgress.pct}
-                      size="sm"
-                      className="mt-1 max-w-xs"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.key)}
+                    aria-expanded={open}
+                    className="mb-2 flex w-full items-center gap-2 text-left"
+                  >
+                    <Chevron open={open} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline gap-2">
+                        <h2 className="truncate text-sm font-bold uppercase tracking-wide text-zinc-700 dark:text-zinc-200">
+                          {section.title}
+                        </h2>
+                        <span className="shrink-0 font-mono text-[11px] tabular-nums text-zinc-400">
+                          {sectionProgress.owned}/{sectionProgress.total}
+                        </span>
+                      </span>
+                      <ProgressBar
+                        owned={sectionProgress.owned}
+                        total={sectionProgress.total}
+                        pct={sectionProgress.pct}
+                        size="sm"
+                        showNumbers={false}
+                        className="mt-1 max-w-xs"
+                      />
+                    </span>
+                  </button>
                 ) : null}
 
-                <div
-                  className={
-                    view === "grid"
-                      ? "grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 md:grid-cols-6"
-                      : "space-y-1.5"
-                  }
-                >
-                  {section.cards.map((card) => (
-                    <CardTile
-                      key={keyOf(card)}
-                      card={card}
-                      subsetLabel={
-                        groupBy === "subset" ? null : (subsetById.get(card.subset ?? "")?.name ?? null)
-                      }
-                      view={view}
-                      pending={pendingKeys.includes(keyOf(card))}
-                      onToggle={onToggle}
-                      showSetName={showSetName}
-                    />
-                  ))}
-                </div>
+                {open ? (
+                  <div
+                    className={
+                      view === "grid"
+                        ? "grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 md:grid-cols-6"
+                        : "space-y-1.5"
+                    }
+                  >
+                    {section.cards.map((card) => (
+                      <CardTile
+                        key={keyOf(card)}
+                        card={card}
+                        subsetLabel={
+                          groupBy === "subset" ? null : (subsetById.get(card.subset ?? "")?.name ?? null)
+                        }
+                        view={view}
+                        pending={pendingKeys.includes(keyOf(card))}
+                        onToggle={onToggle}
+                        showSetName={showSetName}
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </section>
             );
           })}

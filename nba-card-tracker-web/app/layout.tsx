@@ -39,6 +39,7 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let theme: Theme = "light";
   let signedIn = false;
+  let navProfile: { pseudonym: string | null; avatarSeed: string | null } | null = null;
 
   if (isSupabaseConfigured()) {
     try {
@@ -47,6 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         signedIn = true;
         const profile = await tryGetProfile(user.id);
         theme = profile?.prefs.theme ?? "light";
+        if (profile) navProfile = { pseudonym: profile.pseudonym, avatarSeed: profile.avatar_seed };
       }
     } catch {
       // Projet Supabase injoignable : on rend quand meme la coquille.
@@ -61,7 +63,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
         {signedIn ? (
           <Suspense fallback={null}>
-            <NavBar />
+            <NavBar profile={navProfile} />
           </Suspense>
         ) : null}
         <main

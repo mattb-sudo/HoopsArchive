@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
 import CardVisual from "./CardVisual";
-import { addCardAction, restoreCardStateAction, type CardStateSnapshot } from "@/lib/actions";
+import { addCardAction } from "@/lib/actions";
 import { compareCardCode } from "@/lib/cards";
 
 /** Forme compacte envoyee au navigateur (675 cartes : quelques dizaines de Ko). */
@@ -20,14 +19,6 @@ export interface AddCandidate {
   qty: number;
 }
 
-interface SessionEntry {
-  id: number;
-  card: AddCandidate;
-  qty: number;
-  previous: CardStateSnapshot;
-  undone: boolean;
-}
-
 const MAX_SUGGESTIONS = 8;
 
 function normalize(value: string): string {
@@ -41,11 +32,9 @@ export default function AddSession({ candidates }: { candidates: AddCandidate[] 
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<AddCandidate | null>(null);
   const [qty, setQty] = useState(1);
-  const [entries, setEntries] = useState<SessionEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
-  const counter = useRef(0);
 
   const index = useMemo(
     () =>
@@ -89,38 +78,13 @@ export default function AddSession({ candidates }: { candidates: AddCandidate[] 
 
     startTransition(async () => {
       const result = await addCardAction(card.set_id, card.card_code, qty);
-      if (!result.ok || !result.previous) {
+      if (!result.ok) {
         setError(result.error ?? "Ajout impossible.");
         return;
       }
-      counter.current += 1;
-      setEntries((prev) => [
-        {
-          id: counter.current,
-          card: { ...card, owned: true, qty },
-          qty,
-          previous: result.previous as CardStateSnapshot,
-          undone: false,
-        },
-        ...prev,
-      ]);
       reset();
     });
   }
-
-  function undo(entry: SessionEntry) {
-    setError(null);
-    startTransition(async () => {
-      const result = await restoreCardStateAction(entry.previous);
-      if (!result.ok) {
-        setError(result.error ?? "Annulation impossible.");
-        return;
-      }
-      setEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, undone: true } : e)));
-    });
-  }
-
-  const addedCount = entries.filter((e) => !e.undone).length;
 
   return (
     <div className="space-y-5">
@@ -261,61 +225,6 @@ export default function AddSession({ candidates }: { candidates: AddCandidate[] 
         </p>
       ) : null}
 
-      {/* -------- Session en cours -------- */}
-      <section>
-        <h2 className="text-sm font-bold">
-          Ajoutées dans cette session{" "}
-          <span className="font-mono tabular-nums text-zinc-500">({addedCount})</span>
-        </h2>
-
-        {entries.length === 0 ? (
-          <p className="mt-2 rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            Rien pour l&apos;instant. Cette liste se vide au rechargement de la page ; la collection
-            elle-même est enregistrée immédiatement.
-          </p>
-        ) : (
-          <ul className="mt-2 divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-            {entries.map((entry) => (
-              <li
-                key={entry.id}
-                className={`flex items-center gap-3 bg-white px-3 py-2 dark:bg-zinc-900 ${
-                  entry.undone ? "opacity-50" : ""
-                }`}
-              >
-                <Link
-                  href={`/carte/${encodeURIComponent(entry.card.set_id)}/${encodeURIComponent(
-                    entry.card.card_code,
-                  )}`}
-                  className="min-w-0 flex-1"
-                >
-                  <p className="truncate text-sm font-semibold">
-                    {entry.card.player ?? "—"}
-                    {entry.qty > 1 ? (
-                      <span className="ml-1.5 font-mono text-xs text-zinc-500">×{entry.qty}</span>
-                    ) : null}
-                  </p>
-                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                    n° <span className="font-mono">{entry.card.card_code}</span> ·{" "}
-                    {entry.card.subset_name}
-                  </p>
-                </Link>
-                {entry.undone ? (
-                  <span className="text-xs font-semibold text-zinc-400">annulée</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => undo(entry)}
-                    disabled={pending}
-                    className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-semibold hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                  >
-                    Annuler
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

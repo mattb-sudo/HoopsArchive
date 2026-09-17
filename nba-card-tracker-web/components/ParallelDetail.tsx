@@ -6,6 +6,7 @@ import CardVisual from "./CardVisual";
 import {
   removeParallelPhotoAction,
   setParallelNoteAction,
+  setParallelPriceAction,
   setParallelQtyAction,
   toggleParallelOwnedAction,
   uploadParallelPhotoAction,
@@ -32,6 +33,7 @@ export default function ParallelDetail({ card, parallel, setName, subsetName }: 
   const [owned, setOwned] = useState(parallel.owned);
   const [qty, setQty] = useState(parallel.qty);
   const [note, setNote] = useState(parallel.note ?? "");
+  const [price, setPrice] = useState(parallel.price != null ? String(parallel.price) : "");
   const [photoUrl, setPhotoUrl] = useState(parallel.photo_url ?? null);
   const [photoBackUrl, setPhotoBackUrl] = useState(parallel.photo_back_url ?? null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -114,6 +116,21 @@ export default function ParallelDetail({ card, parallel, setName, subsetName }: 
       const res = await setParallelNoteAction(card.set_id, card.card_code, parallel.id, trimmed);
       if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
       else flash("Info enregistrée.");
+    });
+  }
+
+  function savePrice() {
+    const trimmed = price.trim().replace(",", ".");
+    const parsed = trimmed === "" ? null : Number(trimmed);
+    if (parsed !== null && !Number.isFinite(parsed)) {
+      setError("Prix invalide.");
+      return;
+    }
+    if ((parallel.price ?? null) === parsed) return;
+    startTransition(async () => {
+      const res = await setParallelPriceAction(card.set_id, card.card_code, parallel.id, parsed);
+      if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
+      else flash("Prix enregistré.");
     });
   }
 
@@ -293,6 +310,22 @@ export default function ParallelDetail({ card, parallel, setName, subsetName }: 
               Ajouté le {formatDateFr(parallel.date_added)}
               {qty > 1 ? ` · ${qty - 1} en doublon` : ""}
             </p>
+          </div>
+
+          {/* Prix propre a CET exemplaire */}
+          <div>
+            <label htmlFor="parallel-price" className="mb-1 block text-xs font-semibold">
+              Prix / valeur estimée (€)
+            </label>
+            <input
+              id="parallel-price"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              onBlur={savePrice}
+              inputMode="decimal"
+              placeholder="Non renseigné"
+              className="w-full max-w-[10rem] rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            />
           </div>
 
           {/* Note propre a CET exemplaire */}

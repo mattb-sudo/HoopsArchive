@@ -168,6 +168,7 @@ export default async function RecherchePage({ searchParams }: PageProps) {
             showSubsetFilter={false}
             showSetName={distinctSets.size > 1}
             initialView={profile.prefs.defaultView}
+            collapseByDefault={profile.prefs.collapseSectionsByDefault}
             emptyLabel="Aucune carte ne correspond à cette recherche."
           />
         </>

@@ -166,3 +166,54 @@ export function formatShortDateFr(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
 }
+
+// ---------------------------------------------------------------------------
+// Argent : valeur de la collection (prix saisis librement par l'utilisateur)
+// ---------------------------------------------------------------------------
+
+/** Valeur totale possedee = somme(prix x quantite) sur les cartes valorisees. */
+export function totalValue(cards: CardWithState[]): number {
+  return cards
+    .filter((c) => c.owned && c.price != null)
+    .reduce((sum, c) => sum + (c.price ?? 0) * Math.max(c.qty, 1), 0);
+}
+
+/** Nombre de cartes possedees pour lesquelles un prix a ete renseigne. */
+export function pricedOwnedCount(cards: CardWithState[]): number {
+  return cards.filter((c) => c.owned && c.price != null).length;
+}
+
+/** Les N cartes possedees les plus cheres (prix x quantite), triees decroissant. */
+export function topValuableCards(cards: CardWithState[], limit = 10): CardWithState[] {
+  return cards
+    .filter((c) => c.owned && c.price != null && c.price > 0)
+    .sort((a, b) => (b.price ?? 0) * Math.max(b.qty, 1) - (a.price ?? 0) * Math.max(a.qty, 1))
+    .slice(0, limit);
+}
+
+export interface ValueBucket {
+  label: string;
+  value: number;
+}
+
+/** Valeur totale possedee, repartie par set. */
+export function valueBySet(cards: CardWithState[]): ValueBucket[] {
+  const totals = new Map<string, number>();
+  for (const card of cards) {
+    if (!card.owned || card.price == null) continue;
+    const key = card.set_name ?? card.set_id;
+    totals.set(key, (totals.get(key) ?? 0) + card.price * Math.max(card.qty, 1));
+  }
+  return Array.from(totals.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/** Formatage euros compact, pour les totaux/statistiques (sans decimales). */
+export function formatEUR(value: number): string {
+  return value.toLocaleString("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: value < 100 ? 2 : 0,
+  });
+}

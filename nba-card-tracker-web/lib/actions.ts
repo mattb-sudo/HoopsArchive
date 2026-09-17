@@ -493,6 +493,52 @@ export async function restoreCardStateAction(
   return { ok: true };
 }
 
+/** Prix/valeur saisi par l'utilisateur pour cette carte de base (independant du parallele). */
+export async function setCardPriceAction(
+  setId: string,
+  cardCode: string,
+  price: number | null,
+): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.from("user_card_state").upsert({
+    user_id: user.id,
+    set_id: setId,
+    card_code: cardCode,
+    price,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  refreshCollectionViews(setId, cardCode);
+  return { ok: true };
+}
+
+/** Prix/valeur saisi par l'utilisateur pour CET exemplaire de parallele. */
+export async function setParallelPriceAction(
+  setId: string,
+  cardCode: string,
+  parallelId: string,
+  price: number | null,
+): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.from("user_parallel_state").upsert({
+    user_id: user.id,
+    set_id: setId,
+    card_code: cardCode,
+    parallel_id: parallelId,
+    price,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  refreshCollectionViews(setId, cardCode);
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // Photo personnelle (bucket prive card-photos)
 // ---------------------------------------------------------------------------
@@ -671,6 +717,7 @@ export async function updateProfileAction(fields: {
 export async function updatePrefsAction(fields: {
   defaultView?: ViewMode;
   theme?: Theme;
+  collapseSectionsByDefault?: boolean;
 }): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Session expirée." };

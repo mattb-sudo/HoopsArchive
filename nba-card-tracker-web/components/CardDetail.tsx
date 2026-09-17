@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import CardVisual from "./CardVisual";
 import {
   removeCardPhotoAction,
+  setCardPriceAction,
   setParallelQtyAction,
   setQtyAction,
   toggleOwnedAction,
@@ -53,6 +54,7 @@ export default function CardDetail({
   const [qty, setQty] = useState(card.qty);
   const [jersey, setJersey] = useState(card.jersey_number ?? "");
   const [variant, setVariant] = useState(card.variant ?? "");
+  const [price, setPrice] = useState(card.price != null ? String(card.price) : "");
   const [note, setNote] = useState(card.note ?? "");
   const [noteOpen, setNoteOpen] = useState(Boolean(card.note));
   const [parallelState, setParallelState] = useState(parallels);
@@ -166,6 +168,21 @@ export default function CardDetail({
       const res = await updateCardDetailsAction(card.set_id, card.card_code, fields);
       if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
       else flash("Enregistré.");
+    });
+  }
+
+  function savePrice() {
+    const trimmed = price.trim().replace(",", ".");
+    const parsed = trimmed === "" ? null : Number(trimmed);
+    if (parsed !== null && !Number.isFinite(parsed)) {
+      setError("Prix invalide.");
+      return;
+    }
+    if ((card.price ?? null) === parsed) return;
+    startTransition(async () => {
+      const res = await setCardPriceAction(card.set_id, card.card_code, parsed);
+      if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
+      else flash("Prix enregistré.");
     });
   }
 
@@ -449,6 +466,25 @@ export default function CardDetail({
                 className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
               />
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="price" className="mb-1 block text-xs font-semibold">
+              Prix / valeur estimée (€)
+            </label>
+            <input
+              id="price"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              onBlur={savePrice}
+              inputMode="decimal"
+              placeholder="Non renseigné"
+              className="w-full max-w-[10rem] rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            />
+            <p className="mt-1 text-[10px] text-zinc-400">
+              Affiché en badge sur la vignette du classeur, et comptabilisé dans l&apos;onglet
+              Argent.
+            </p>
           </div>
 
           {/* Parallèles connus du set — chacun cochable independamment */}

@@ -118,6 +118,7 @@ export default function CardTile({
           subsetLabel={subsetLabel}
           photoUrl={card.photo_url}
           photoBackUrl={card.photo_back_url}
+          price={card.price}
           size="tile"
           dimmed={!card.owned}
           gold={card.qty > 1}

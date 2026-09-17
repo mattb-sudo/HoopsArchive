@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CardVisual from "@/components/CardVisual";
-import SetupNotice from "@/components/SetupNotice";
+import FocusManager from "@/components/FocusManager";
 import ProgressBar from "@/components/ProgressBar";
+import SetupNotice from "@/components/SetupNotice";
 import { subsetLabel } from "@/lib/cards";
-import { focusProgressList, getCollectionSnapshot, requireUser } from "@/lib/db";
+import { focusProgressList, getCollectionSnapshot, getFocusOptions, requireUser } from "@/lib/db";
 import { FOCUS_TYPE_LABELS } from "@/lib/focus";
 import { dailyPick } from "@/lib/rng";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { NOISE_TEXTURE } from "@/lib/textures";
 import type { CardWithState } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Mes focus" };
@@ -23,10 +23,16 @@ export default async function FocusLibraryPage() {
   if (!isSupabaseConfigured()) return <SetupNotice />;
   await requireUser();
 
-  const { subsets, cards, cardPlayers, focuses } = await getCollectionSnapshot();
+  const [{ subsets, cards, cardPlayers, focuses }, options] = await Promise.all([
+    getCollectionSnapshot(),
+    getFocusOptions(),
+  ]);
   const entries = focusProgressList(focuses, cards, cardPlayers);
   const active = entries.filter((e) => e.focus.active);
   const inactive = entries.filter((e) => !e.focus.active);
+  const focusProgress = Object.fromEntries(
+    entries.map((entry) => [entry.focus.id, { owned: entry.owned, total: entry.total, pct: entry.pct }]),
+  );
 
   function Row({ entry }: { entry: (typeof entries)[number] }) {
     const missing = entry.cards.filter((c) => !c.owned);
@@ -79,40 +85,14 @@ export default async function FocusLibraryPage() {
 
   return (
     <div className="space-y-5">
-      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 p-5 text-white shadow-[0_20px_45px_-20px_rgba(0,0,0,0.45)]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
-          style={{ backgroundImage: NOISE_TEXTURE }}
-        />
-        <div className="relative flex items-baseline justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-orange-400">
-              Ce que vous collectionnez vraiment
-            </p>
-            <h1 className="mt-1 font-display text-2xl font-bold uppercase tracking-tight">
-              Mes focus
-            </h1>
-          </div>
-          <Link href="/profil#focus" className="shrink-0 text-xs font-semibold text-orange-400 hover:underline">
-            Gérer
-          </Link>
-        </div>
-        <p className="relative mt-1 text-sm text-white/70">
-          {entries.length === 0
-            ? "Aucun focus pour l'instant."
-            : `${active.length} focus actif${active.length > 1 ? "s" : ""} sur ${entries.length}.`}
-        </p>
-      </header>
+      <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Mes focus</h1>
+
+      <FocusManager focuses={focuses} options={options} focusProgress={focusProgress} />
 
       {entries.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
           Un focus suit un joueur, une équipe, ou une équipe sur une saison donnée — à travers tous
-          les sets. Ajoutez-en un depuis votre{" "}
-          <Link href="/profil#focus" className="font-semibold text-orange-600 underline dark:text-orange-400">
-            profil
-          </Link>
-          .
+          les sets. Ajoutez-en un ci-dessus.
         </p>
       ) : (
         <div className="space-y-3">

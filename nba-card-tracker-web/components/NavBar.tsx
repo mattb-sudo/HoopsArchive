@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { avatarFor } from "@/lib/avatars";
 
 interface NavItem {
   href: string;
@@ -44,7 +44,8 @@ function BallMark({ className = "h-5 w-5" }: { className?: string }) {
 
 // Destinations de premier niveau. "Ajouter" n'en fait pas partie : c'est une
 // action, pas une section a parcourir — elle a son propre traitement (bouton
-// plein sur desktop, FAB surelevee au centre sur mobile).
+// plein sur desktop, FAB surelevee au centre sur mobile). "Profil" n'en fait
+// pas partie non plus : elle est rendue a part (avatar + pseudo).
 const NAV_ITEMS: NavItem[] = [
   {
     href: "/accueil",
@@ -78,12 +79,13 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: "/profil",
-    label: "Profil",
+    href: "/argent",
+    label: "Argent",
     icon: (
       <Icon>
-        <circle cx="12" cy="8.5" r="3.5" />
-        <path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5" />
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M9.5 15.5c0 1 1 1.8 2.5 1.8s2.5-.7 2.5-1.7c0-2.4-5-1.2-5-3.6 0-1 1-1.7 2.5-1.7s2.5.7 2.5 1.7" />
+        <path d="M12 7.7v1M12 15.3v1" />
       </Icon>
     ),
   },
@@ -99,41 +101,69 @@ const ADD_ITEM: NavItem = {
   ),
 };
 
-const SEARCH_ICON = (
-  <Icon>
-    <circle cx="10.5" cy="10.5" r="6" />
-    <path d="M15 15l4.5 4.5" />
-  </Icon>
-);
-
 function isActive(pathname: string, href: string): boolean {
   if (href === "/accueil") return pathname === "/accueil" || pathname === "/";
   if (href === "/sets") return pathname === "/sets" || pathname.startsWith("/classeur");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+export interface NavBarProfile {
+  pseudonym: string | null;
+  avatarSeed: string | null;
+}
+
+/** Rendu commun du lien "Profil" : avatar + pseudo, a la place d'une icone generique. */
+function ProfileLink({
+  profile,
+  active,
+  variant,
+}: {
+  profile: NavBarProfile | null;
+  active: boolean;
+  variant: "desktop" | "mobile";
+}) {
+  const avatar = avatarFor(profile?.avatarSeed);
+  const name = profile?.pseudonym || "Profil";
+
+  if (variant === "mobile") {
+    return (
+      <Link
+        href="/profil"
+        aria-current={active ? "page" : undefined}
+        className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+          active ? "text-orange-400" : "text-zinc-400"
+        }`}
+      >
+        <span aria-hidden className="text-base leading-none">
+          {avatar.emoji}
+        </span>
+        <span className="max-w-[4rem] truncate">{name}</span>
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href="/profil"
+      aria-current={active ? "page" : undefined}
+      className={`relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition after:absolute after:inset-x-3 after:-bottom-[1px] after:h-0.5 after:rounded-full after:transition-colors ${
+        active ? "text-white after:bg-orange-500" : "text-zinc-400 after:bg-transparent hover:text-zinc-100"
+      }`}
+    >
+      <span aria-hidden className="text-base leading-none">
+        {avatar.emoji}
+      </span>
+      <span className="hidden max-w-[8rem] truncate md:inline">{name}</span>
+    </Link>
+  );
+}
+
 /**
  * Navigation persistante : barre basse sur mobile, barre haute sur desktop.
- * Sur desktop l'icone de recherche deploie un champ de saisie visible.
  */
-export default function NavBar() {
+export default function NavBar({ profile = null }: { profile?: NavBarProfile | null }) {
   const pathname = usePathname() ?? "/";
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const onSearchPage = pathname === "/recherche";
-  const [expanded, setExpanded] = useState(onSearchPage);
-  const [query, setQuery] = useState(searchParams?.get("q") ?? "");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (expanded) inputRef.current?.focus();
-  }, [expanded]);
-
-  function submit(event: React.FormEvent) {
-    event.preventDefault();
-    const q = query.trim();
-    router.push(q ? `/recherche?q=${encodeURIComponent(q)}` : "/recherche");
-  }
+  const profileActive = isActive(pathname, "/profil");
 
   return (
     <>
@@ -169,39 +199,9 @@ export default function NavBar() {
             </Link>
           ))}
 
-          <div className="ml-auto flex items-center gap-2">
-            {expanded ? (
-              <form onSubmit={submit} role="search" className="flex items-center gap-1">
-                <label className="sr-only" htmlFor="nav-search">
-                  Rechercher une carte
-                </label>
-                <input
-                  id="nav-search"
-                  ref={inputRef}
-                  type="search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Joueur, équipe, numéro…"
-                  className="w-56 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-orange-500"
-                />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600"
-                >
-                  OK
-                </button>
-              </form>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setExpanded(true)}
-                aria-label="Ouvrir la recherche"
-                className="rounded-lg p-2 text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
-              >
-                {SEARCH_ICON}
-              </button>
-            )}
+          <ProfileLink profile={profile} active={profileActive} variant="desktop" />
 
+          <div className="ml-auto flex items-center gap-2">
             {/* "Ajouter" est une action, pas une section : bouton plein plutot
                 qu'un onglet parmi d'autres. */}
             <Link
@@ -215,55 +215,58 @@ export default function NavBar() {
         </div>
       </header>
 
-      {/* -------- Mobile : mini barre haute (marque + recherche) -------- */}
-      <header className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b border-white/10 bg-zinc-950 px-4 sm:hidden">
+      {/* -------- Mobile : mini barre haute (marque) -------- */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-12 items-center border-b border-white/10 bg-zinc-950 px-4 sm:hidden">
         <Link href="/accueil" className="flex items-center gap-1.5">
           <BallMark className="h-5 w-5 text-orange-500" />
           <span className="font-display text-sm font-semibold uppercase tracking-wide text-white">
             Hoops<span className="text-orange-500">Archive</span>
           </span>
         </Link>
-        <Link
-          href="/recherche"
-          aria-current={onSearchPage ? "page" : undefined}
-          aria-label="Rechercher une carte"
-          className={`rounded-lg p-1.5 ${onSearchPage ? "text-orange-400" : "text-zinc-400"}`}
-        >
-          {SEARCH_ICON}
-        </Link>
       </header>
 
       {/* -------- Mobile : barre basse -------- */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
-        <ul className="grid grid-cols-5 items-end">
-          {[NAV_ITEMS[0], NAV_ITEMS[1], null, NAV_ITEMS[2], NAV_ITEMS[3]].map((item) =>
-            item ? (
-              <li key={item.href}>
+        <ul className="grid grid-cols-6 items-end">
+          {([NAV_ITEMS[0], NAV_ITEMS[1], NAV_ITEMS[2], null, NAV_ITEMS[3], "profile"] as const).map((item) => {
+            if (item === "profile") {
+              return (
+                <li key="profile">
+                  <ProfileLink profile={profile} active={profileActive} variant="mobile" />
+                </li>
+              );
+            }
+            if (!item) {
+              return (
+                <li key="add" className="flex items-center justify-center">
+                  <Link
+                    href={ADD_ITEM.href}
+                    aria-label={ADD_ITEM.label}
+                    className="-translate-y-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-500 text-white shadow-[0_4px_14px_rgba(249,115,22,0.55)] ring-4 ring-zinc-950 transition active:scale-95"
+                  >
+                    <Icon>
+                      <path d="M12 5v14M5 12h14" />
+                    </Icon>
+                  </Link>
+                </li>
+              );
+            }
+            const navItem = item as NavItem;
+            return (
+              <li key={navItem.href}>
                 <Link
-                  href={item.href}
-                  aria-current={isActive(pathname, item.href) ? "page" : undefined}
+                  href={navItem.href}
+                  aria-current={isActive(pathname, navItem.href) ? "page" : undefined}
                   className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                    isActive(pathname, item.href) ? "text-orange-400" : "text-zinc-400"
+                    isActive(pathname, navItem.href) ? "text-orange-400" : "text-zinc-400"
                   }`}
                 >
-                  {item.icon}
-                  <span>{item.label}</span>
+                  {navItem.icon}
+                  <span>{navItem.label}</span>
                 </Link>
               </li>
-            ) : (
-              <li key="add" className="flex items-center justify-center">
-                <Link
-                  href={ADD_ITEM.href}
-                  aria-label={ADD_ITEM.label}
-                  className="-translate-y-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-500 text-white shadow-[0_4px_14px_rgba(249,115,22,0.55)] ring-4 ring-zinc-950 transition active:scale-95"
-                >
-                  <Icon>
-                    <path d="M12 5v14M5 12h14" />
-                  </Icon>
-                </Link>
-              </li>
-            ),
-          )}
+            );
+          })}
         </ul>
       </nav>
     </>

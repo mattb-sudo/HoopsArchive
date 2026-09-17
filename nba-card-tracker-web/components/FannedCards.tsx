@@ -39,6 +39,8 @@ export default function FannedCards({ cards }: { cards: CardWithState[] }) {
               team={card.team}
               cardCode={card.card_code}
               rookie={card.rookie}
+              photoUrl={card.photo_url}
+              photoBackUrl={card.photo_back_url}
               size="thumb"
               gold={card.qty > 1}
             />
