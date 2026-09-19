@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getCurrentUser, getSignedPhotoUrl, PHOTO_BUCKET } from "./db";
+import { estimatePriceFromEbay, isEbayConfigured } from "./ebay";
 import { encodeTeamSeason } from "./focus";
 import { normalizePrefs, type FocusType, type Theme, type ViewMode } from "./types";
 
@@ -537,6 +538,88 @@ export async function setParallelPriceAction(
 
   refreshCollectionViews(setId, cardCode);
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Estimation automatique de prix via eBay (recherche d'annonces actives)
+// ---------------------------------------------------------------------------
+
+export interface EbayPriceResult extends ActionResult {
+  price?: number;
+  sampleSize?: number;
+  searchUrl?: string;
+}
+
+/** Cherche un prix pour la carte de base sur eBay et l'enregistre si trouve. */
+export async function fetchCardPriceFromEbayAction(
+  setId: string,
+  cardCode: string,
+  query: string,
+): Promise<EbayPriceResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+  if (!isEbayConfigured()) {
+    return {
+      ok: false,
+      error: "eBay n'est pas configuré (EBAY_CLIENT_ID / EBAY_CLIENT_SECRET manquants sur Vercel).",
+    };
+  }
+
+  try {
+    const estimate = await estimatePriceFromEbay(query);
+    if (!estimate) return { ok: false, error: "Aucune annonce eBay.fr correspondante trouvée." };
+
+    const supabase = createSupabaseServerClient();
+    const { error } = await supabase.from("user_card_state").upsert({
+      user_id: user.id,
+      set_id: setId,
+      card_code: cardCode,
+      price: estimate.price,
+    });
+    if (error) return { ok: false, error: error.message };
+
+    refreshCollectionViews(setId, cardCode);
+    return { ok: true, price: estimate.price, sampleSize: estimate.sampleSize, searchUrl: estimate.searchUrl };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Recherche eBay impossible." };
+  }
+}
+
+/** Cherche un prix pour CET exemplaire de parallele sur eBay et l'enregistre si trouve. */
+export async function fetchParallelPriceFromEbayAction(
+  setId: string,
+  cardCode: string,
+  parallelId: string,
+  query: string,
+): Promise<EbayPriceResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+  if (!isEbayConfigured()) {
+    return {
+      ok: false,
+      error: "eBay n'est pas configuré (EBAY_CLIENT_ID / EBAY_CLIENT_SECRET manquants sur Vercel).",
+    };
+  }
+
+  try {
+    const estimate = await estimatePriceFromEbay(query);
+    if (!estimate) return { ok: false, error: "Aucune annonce eBay.fr correspondante trouvée." };
+
+    const supabase = createSupabaseServerClient();
+    const { error } = await supabase.from("user_parallel_state").upsert({
+      user_id: user.id,
+      set_id: setId,
+      card_code: cardCode,
+      parallel_id: parallelId,
+      price: estimate.price,
+    });
+    if (error) return { ok: false, error: error.message };
+
+    refreshCollectionViews(setId, cardCode);
+    return { ok: true, price: estimate.price, sampleSize: estimate.sampleSize, searchUrl: estimate.searchUrl };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Recherche eBay impossible." };
+  }
 }
 
 // ---------------------------------------------------------------------------

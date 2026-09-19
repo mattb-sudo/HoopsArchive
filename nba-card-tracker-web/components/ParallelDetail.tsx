@@ -10,9 +10,11 @@ import {
   setParallelQtyAction,
   toggleParallelOwnedAction,
   uploadParallelPhotoAction,
+  fetchParallelPriceFromEbayAction,
 } from "@/lib/actions";
 import { formatDateFr } from "@/lib/cards";
 import { compressImageFile } from "@/lib/imageCompress";
+import { point130SearchUrl, scpQueryForCard, scpSearchUrl } from "@/lib/sportscardspro";
 import type { CardWithState, ParallelWithState } from "@/lib/types";
 
 export interface ParallelDetailProps {
@@ -133,6 +135,23 @@ export default function ParallelDetail({ card, parallel, setName, subsetName }: 
       const res = await setParallelPriceAction(card.set_id, card.card_code, parallel.id, parsed);
       if (!res.ok) setError(res.error ?? "Enregistrement impossible.");
       else flash("Prix enregistré.");
+    });
+  }
+
+  function fetchPriceFromEbay() {
+    const query = scpQueryForCard(card.player, card.card_code, setName, parallel.name);
+    startTransition(async () => {
+      const res = await fetchParallelPriceFromEbayAction(card.set_id, card.card_code, parallel.id, query);
+      if (!res.ok) {
+        setError(res.error ?? "Recherche eBay impossible.");
+        return;
+      }
+      setPrice(res.price != null ? String(res.price) : "");
+      flash(
+        res.sampleSize
+          ? `Prix mis à jour depuis eBay.fr (estimation sur ${res.sampleSize} annonce${res.sampleSize > 1 ? "s" : ""}).`
+          : "Prix mis à jour depuis eBay.fr.",
+      );
     });
   }
 
@@ -319,15 +338,41 @@ export default function ParallelDetail({ card, parallel, setName, subsetName }: 
             <label htmlFor="parallel-price" className="mb-1 block text-xs font-semibold">
               Prix / valeur estimée (€)
             </label>
-            <input
-              id="parallel-price"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              onBlur={savePrice}
-              inputMode="decimal"
-              placeholder="Non renseigné"
-              className="w-full max-w-[10rem] rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                id="parallel-price"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                onBlur={savePrice}
+                inputMode="decimal"
+                placeholder="Non renseigné"
+                className="w-full max-w-[10rem] rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              />
+              <button
+                type="button"
+                onClick={fetchPriceFromEbay}
+                disabled={pending}
+                className="text-xs font-semibold text-orange-600 hover:underline disabled:opacity-40 dark:text-orange-400"
+              >
+                🔄 Chercher automatiquement (eBay)
+              </button>
+              <a
+                href={scpSearchUrl(scpQueryForCard(card.player, card.card_code, setName, parallel.name))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-zinc-500 hover:underline dark:text-zinc-400"
+              >
+                ou sur SportsCardsPro ↗
+              </a>
+              <a
+                href={point130SearchUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-zinc-500 hover:underline dark:text-zinc-400"
+              >
+                ou sur 130point ↗
+              </a>
+            </div>
           </div>
 
           {/* Note propre a CET exemplaire */}

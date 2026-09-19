@@ -7,7 +7,10 @@ import { isSupabaseConfigured, supabaseEnv } from "./env";
  * des liens envoyes par email (confirmation d'inscription) : il doit rester
  * joignable, sinon le code ne peut jamais etre echange contre une session.
  */
-const PUBLIC_PATHS = ["/login", "/auth"];
+// "/api" est public au sens de ce middleware : les routes API gerent leur
+// propre logique (ex. webhook de conformite eBay, appele par des serveurs
+// tiers sans cookie de session) plutot que d'etre redirigees vers /login.
+const PUBLIC_PATHS = ["/login", "/auth", "/api"];
 
 /** Routes dont un utilisateur deja connecte doit etre sorti. */
 const AUTH_ENTRY_PATHS = ["/login"];
